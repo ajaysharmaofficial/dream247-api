@@ -1,0 +1,32 @@
+<!-- views/pg-form-request.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Redirecting...</title>
+</head>
+<body onload="document.forms[0].submit();">
+    <form method="POST" action="<%= formData.spURL %>">
+        <input type="hidden" name="encData" value="<%= formData.encData %>" />
+        <input type="hidden" name="clientCode" value="<%= formData.clientCode %>" />
+    </form>
+    <p>Redirecting to payment...</p>
+</body>
+</html>
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Redirecting...</title>
+</head>
+<body onload="document.forms[0].submit();">
+    <form method="POST" action="https://stage-securepay.sabpaisa.in/SabPaisa/sabPaisaInit?v=1">
+        <input type="hidden" name="encData" value="5S59zJTlRR/eAGQJCquPRjBp0Umk4UuAhqnaecAOrhpbsDMehypqH7lCNguUtPrdwdOz6YAJuH7NF5Js2lAgRDoxgMaVRIyhHT3/52VRYY+h8U0mrfb5xSC8UrMj1lDpmMGmkz98aZQvLy7zZKvq/eXPM6EbR86v3tudquCYxNzDKl3aB/S3a/AXhUlzNHbpVdAY58xkhodzTH8YHHVQx7rTxhhiB6lcbpjbJv6uWybzm2ypGZPyLjushqADgMZ6gmxoF0bpoBWbpAh6lYrbwf0aBUpKbPiltAEvfYhoDDgDUNS0GKSrIR6nWnna5gbAd6HQMcksyErxsU3k976jrSn8ef3pxiKpxlYbN+LJpgjWbT3eZAZgbm7bI/KW/mZCWYNpeO6D6iJoEIQSZlCykkP29S7k66TAwbF1f5HaJNM0kXyqwRwln6zTpDysA1EuMTQyU1LcqEBaXAJmL7k0s7mezJvaJTwLiqK7cfY5kV4=" />
+        <input type="hidden" name="clientCode" value="TM001" />
+    </form>
+    <p>Redirecting to payment...</p>
+</body>
+</html> -->
+
+

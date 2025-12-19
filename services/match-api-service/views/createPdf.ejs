@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><img src="logo.png"> Fantasy</title>
+    <style>
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border: 1px solid black;
+        padding: 8px;
+        text-align: left;
+      }
+
+      th {
+        background-color: #f2f2f2;
+      }
+
+      body {
+        font-size: 5px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>
+      <img
+        src="logo.png"
+        width="25px"
+        height="25px"
+      />Fantasy
+    </h1>
+    <table>
+      <thead>
+        <tr>
+          <th>Team</th>
+          <th>Team Number</th>
+          <th>Player 1</th>
+          <th>Player 2</th>
+          <th>Player 3</th>
+          <th>Player 4</th>
+          <th>Player 5</th>
+          <th>Player 6</th>
+          <th>Player 7</th>
+          <th>Player 8</th>
+          <th>Player 9</th>
+          <th>Player 10</th>
+          <th>Player 11</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% data.forEach(player=> { %>
+        <tr>
+          <td><%= player.team %></td>
+          <td><%= player.teamnumber %></td>
+          <% player.players.forEach(x=> { %>
+          <td>
+            <%= x.player_name %> <% if
+            (x._id.toString()===player.captain.toString()) { %> (C) <% } %> <%
+            if (x._id.toString()===player.vicecaptain.toString()) { %> (Vc) <% }
+            %>
+          </td>
+          <% }) %> <% for (let i=player.players.length; i < 11; i++) { %>
+          <td></td>
+          <% } %>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </body>
+</html>
