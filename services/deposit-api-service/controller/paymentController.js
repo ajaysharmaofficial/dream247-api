@@ -52,6 +52,32 @@ exports.fetchOffers = async (req, res) => {
     }
 }
 
+exports.getTiers = async (req, res) => {
+    try {
+        const data = await paymentServices.getTiers(req);
+
+        if (data && data.status) {
+            return res.status(200).json({
+                success: true,
+                message: data.message,
+                data: data.data,
+            });
+        } else {
+            return res.status(200).json({
+                success: false,
+                message: data.message,
+            });
+        }
+    } catch (error) {
+        console.error("Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "An unexpected error occurred. Please try again later.",
+        });
+    }
+}
+
 exports.newRequestAddCash = async (req, res, next) => {
     try {
         const data = await paymentServices.newRequestAddCash(req);

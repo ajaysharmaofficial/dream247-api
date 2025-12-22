@@ -10,6 +10,7 @@ router.use((req, res, next) => {
 
 router.get("/db-health-check", paymentController.dbCheck);
 router.get("/fetch-offers", auth, paymentController.fetchOffers);
+router.get("/getTiers", auth, paymentController.getTiers);
 // router.post("/newRequestAddCash", auth, paymentController.newRequestAddCash);
 router.post("/add-cash-new-request", auth, paymentController.AddCashNewRequestKafka);
 

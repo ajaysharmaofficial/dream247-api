@@ -4,6 +4,7 @@ const userModel = require('../../../models/userModel');
 const randomstring = require('randomstring');
 const specialOfferModel = require('../../../models/specialOfferModel');
 const depositModel = require("../../../models/depositModel");
+const tierbreakdown = require("../../../models/tierbreakdown");
 const gstModel = require("../../../models/gstModel");
 const appliedOfferModel = require("../../../models/appliedOfferModel");
 const configModel = require("../../../models/configModel");
@@ -245,6 +246,59 @@ exports.fetchOffers = async (req) => {
       status: false,
       message: "Get Offers failed.",
       error: error.message,
+    };
+  }
+};
+
+exports.getTiers = async (req) => {
+  try {
+    const REDIS_KEY = "tierbreakdown";
+    const redisData = await redisMain.getkeydata(REDIS_KEY);
+
+    if (
+      redisData &&
+      redisData.data &&
+      Array.isArray(redisData.data) &&
+      redisData.data.length > 0
+    ) {
+      return {
+        status: true,
+        message: "Tier data fetched from Redis",
+        data: redisData.data,
+      };
+    }
+
+    const tiers = await tierbreakdown
+      .find()
+      .sort({ minAmount: 1 })
+      .lean();
+
+    if (!tiers || tiers.length === 0) {
+      return {
+        status: false,
+        message: "Tier data not found",
+        data: [],
+      };
+    }
+
+    const ONE_YEAR_TTL = 60 * 60 * 24 * 365;
+
+    await redisMain.setkeydata(
+      REDIS_KEY,
+      { data: tiers },
+      ONE_YEAR_TTL
+    );
+
+    return {
+      status: true,
+      message: "Tier data fetched from DB",
+      data: tiers,
+    };
+  } catch (error) {
+    console.error("getTiers error:", error);
+    return {
+      status: false,
+      message: "Failed to fetch tier data",
     };
   }
 };
