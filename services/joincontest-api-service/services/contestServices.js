@@ -132,71 +132,36 @@ class contestServices {
             let totalWinningUsed = 0;
             let totalBalanceUsed = 0;
 
-
             for (let i = 0; i < count; i++) {
-                if (challengeDetails.bonus_type == "flat") {
-                    var totalChallengeBonus = challengeDetails.bonus_percentage;
-                } else {
-                    var totalChallengeBonus = (challengeDetails.bonus_percentage / 100) * challengeDetails.entryfee;
-                }
 
+                let remainingFee = challengeDetails.entryfee - Number(challengeDetails.discount_fee);
                 let bonusUseAmount = 0;
 
-
-                if (bonus >= totalChallengeBonus) {
-                    bonusUseAmount = totalChallengeBonus;
-                    bonus -= totalChallengeBonus;
-                } else {
+                if (remainingFee > 0 && bonus >= remainingFee) {
+                    bonusUseAmount = remainingFee;
+                    bonus -= remainingFee;
+                    remainingFee = 0;
+                } else if (remainingFee > 0) {
                     bonusUseAmount = bonus;
+                    remainingFee -= bonus;
                     bonus = 0;
                 }
-
-                let remainingFee = challengeDetails.entryfee - bonusUseAmount - Number(challengeDetails.discount_fee);
-                let balanceUseAmount = 0;
-
-
-                if (remainingFee > 0 && balance >= remainingFee) {
-                    balanceUseAmount = remainingFee;
-                    balance -= remainingFee;
-                    remainingFee = 0;
-                } else if (remainingFee > 0) {
-                    balanceUseAmount = balance;
-                    remainingFee -= balance;
-                    balance = 0;
-                }
-
-                let winningUseAmount = 0;
-
-                if (remainingFee > 0 && winning >= remainingFee) {
-                    winningUseAmount = remainingFee;
-                    winning -= remainingFee;
-                    remainingFee = 0;
-                } else if (remainingFee > 0) {
-                    winningUseAmount = winning;
-                    remainingFee -= winning;
-                    winning = 0;
-                }
-
 
                 if (remainingFee > 0) {
                     return {
                         status: i > 0 ? true : false,
                         finalBalances: { bonus, winning, balance },
                         finalUsedBalances: {
-                            bonusUsed: totalBonusUsed,
-                            winningUsed: totalWinningUsed,
-                            balanceUsed: totalBalanceUsed,
+                            bonusUsed: bonusUseAmount,
+                            winningUsed: 0,
+                            balanceUsed: 0,
                         },
                         count: i,
                     };
                 }
 
                 totalBonusUsed += bonusUseAmount;
-                totalBalanceUsed += balanceUseAmount;
-                totalWinningUsed += winningUseAmount;
             }
-
-
 
             return {
                 status: true,

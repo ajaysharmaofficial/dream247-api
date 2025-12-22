@@ -743,9 +743,8 @@ exports.AddCashNewRequestKafka = async (req, res) => {
 
     }
 
-    // Save payment process record
     let checkData = {
-      _id: mongoose.Types.ObjectId(), // Unique MongoDB ObjectId
+      _id: mongoose.Types.ObjectId(),
       amount: req.body.amount,
       userid: hasUser._id,
       paymentmethod: req.body.paymentmethod,
