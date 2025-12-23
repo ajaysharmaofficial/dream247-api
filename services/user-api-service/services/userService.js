@@ -369,10 +369,10 @@ exports.getVersion = async (req) => {
           iOSversion: appSettingData[0].iOSversion,
           maintenance: appSettingData[0].maintenance,
           iOSmaintenance: appSettingData[0].iOSmaintenance,
-          referurl: `${global.constant.REFERAL_URL}?refercode=%REFERCODE%`,
+          referurl: `${global.constant.REFERAL_URL}%REFERCODE%`,
           apkname: `${global.constant.APP_SHORT_NAME}.apk`,
           androidappurl: `${global.constant.APK_URL}`,
-          refermessage: `🎉 Refer and Earn Rewards!  🎉 Refer a friend and earn ₹ ${referBonus} for the referrer, and the referred user receives ₹ ${referBonus} upon downloading using this link: ${global.constant.REFERAL_URL}?refercode=%REFERCODE% .Don't forget to use the referral code: %REFERCODE% .`,
+          refermessage: `🎉 Refer and Earn Rewards!  🎉 Refer a friend and earn ₹ ${referBonus} for the referrer, and the referred user receives ₹ ${referBonus} upon downloading using this link: ${global.constant.REFERAL_URL}%REFERCODE% .Don't forget to use the referral code: %REFERCODE% .`,
           contestsharemessage:
             "⚔️ %TeamName% challenged you for a fantasy contest in %Team1% vs %Team2% match on %AppName%. Visit for Android 📱: %url_share% to accept the challenge. 🏆 Alternatively, you can also copy code %inviteCode% to join the contest. 🚀 ",
           minwithdraw: appSettingData[0].minwithdraw,
