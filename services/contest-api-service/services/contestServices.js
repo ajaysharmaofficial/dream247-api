@@ -6688,43 +6688,12 @@ class contestServices {
             let winning = parseFloat(Number(wallet.winning || 0).toFixed(2));
             const totalBalance = bonus + balance + winning;
 
-            let findUsableBalance = balance + winning;
+            let findUsableBalance = bonus;
             let findBonusAmount = 0;
 
-            if (matchchallengesData.is_bonus == 1 && matchchallengesData.bonus_percentage) {
-                const bonusPer = matchchallengesData.bonus_percentage;
-                const entryFee = matchchallengesData.entryfee;
-                const multiplier = total_team_count || 1;
-
-                if (matchchallengesData.bonus_type === "flat") {
-                    findBonusAmount = bonusPer * multiplier;
-                } else {
-                    findBonusAmount = ((bonusPer * multiplier) / 100) * entryFee;
-                }
-            }
-
-            let usedBonus = Math.min(bonus, findBonusAmount);
-            findUsableBalance += usedBonus;
 
             const multiplier = total_team_count || 1;
             let entryfee = matchchallengesData.entryfee * multiplier - discount_fee * multiplier;
-            let remainingEntryFee = entryfee - usedBonus;
-
-            let deductFromBalance = 0, deductFromWinning = 0, requiredAdditionalBalance = 0;
-
-            if (findUsableBalance >= remainingEntryFee) {
-                if (balance >= remainingEntryFee) {
-                    deductFromBalance = remainingEntryFee;
-                } else {
-                    deductFromBalance = balance;
-                    deductFromWinning = remainingEntryFee - balance;
-                }
-            } else {
-                deductFromBalance = balance;
-                deductFromWinning = winning;
-                requiredAdditionalBalance = Math.max(0, remainingEntryFee - (balance + winning));
-            }
-
             return {
                 message: "Get amount to be used",
                 status: true,
@@ -6732,13 +6701,9 @@ class contestServices {
                     usablebalance: findUsableBalance.toFixed(2),
                     usertotalbalance: totalBalance.toFixed(2),
                     entryfee: entryfee.toFixed(2),
-                    bonus: usedBonus.toFixed(2),
                     totalWinning: winning.toFixed(2),
                     totalBonus: bonus.toFixed(2),
                     totalDeposit: balance.toFixed(2),
-                    deductFromBalance: deductFromBalance.toFixed(2),
-                    deductFromWinning: deductFromWinning.toFixed(2),
-                    requiredAdditionalBalance: requiredAdditionalBalance.toFixed(2),
                 },
             };
         } catch (error) {
