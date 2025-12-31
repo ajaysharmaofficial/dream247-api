@@ -692,7 +692,8 @@ class contestServices {
                 },
                 {
                     $unwind: {
-                        path: "$matchchallenge"
+                        path: "$matchchallenge",
+                        preserveNullAndEmptyArrays: true
                     }
                 },
                 {
@@ -719,7 +720,8 @@ class contestServices {
                 },
                 {
                     $unwind: {
-                        path: "$leaderboardData"
+                        path: "$leaderboardData",
+                        preserveNullAndEmptyArrays: true
                     }
                 },
                 {
@@ -1545,7 +1547,7 @@ class contestServices {
                         tmpObj.amount_type = `${challengeData?.amount_type}`;
                         let price_card = [], matchpricecard = [];
                         // console.log('challengeData', JSON.stringify(challengeData));
-                        console.log('challengeData?.compress', challengeData?.compress);
+                        // console.log('challengeData?.compress', challengeData?.compress);
                         if (challengeData?.compress == false) {
                             let keyPricecard = `challengePricecard:${challanges._id}`;
                             matchpricecard = await redisContest.getkeydata(keyPricecard);
@@ -1555,8 +1557,10 @@ class contestServices {
                                 await redisContest.setkeydata(keyPricecard, matchpricecard, 60 * 60 * 24 * 10);
                             }
                         } else {
-                            matchpricecard = challengeData.matchpricecards
+                            const challengeData = await matchchallengesModel.findById(challanges._id);
+                            matchpricecard = challengeData?.matchpricecards || [];
                         }
+                        // console.log('matchpricecard', matchpricecard);
                         let winners = 0;
                         if (matchpricecard.length > 0) {
                             for await (const priceCard of matchpricecard) {

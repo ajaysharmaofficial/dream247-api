@@ -5,6 +5,8 @@ const { startGroupCreateJoinContest, startContestUpdateGroup, startUpdateUserGro
 const { processEmailVerification, processAadharVerification, processPanVerification, processBankVerification } = require("./kycConsumer.js")
 const { processPayouts, processP2Ptxns } = require("./withdrawConsumer.js");
 const { startCreateTeamGroup } = require('./createTeamConsumer.js');
+const { startTransactionGroup, startNotificationGroup } = require('./createTransactionConsumer.js');
+const { winningWalletUpdate, winningTransactionUpdate, winningUpdateInLeaderboard, rankUpdateRedisToDB, runConsumer, mappingPlayersConsumer, pointUpdateRedisToDB } = require('./createLeaderboardConsumer.js');
 
 async function startAllConsumers() {
 
@@ -39,6 +41,19 @@ async function startAllConsumers() {
     // withdraw consumer
     await processPayouts()
     // await processP2Ptxns()
+
+    // create transaction consumer
+    await startTransactionGroup()
+    await startNotificationGroup()
+
+    // create leaderboard consumer
+    await winningWalletUpdate()
+    await winningTransactionUpdate()
+    await winningUpdateInLeaderboard()
+    await rankUpdateRedisToDB()
+    await runConsumer()
+    await mappingPlayersConsumer()
+    await pointUpdateRedisToDB()
 
     console.log("All consumers started");
 }

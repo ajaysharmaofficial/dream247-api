@@ -387,7 +387,6 @@ exports.requestWithdrawNewKafkaJune = async (req) => {
 
     let lastWithdrawTime;
     let lastWithdrawKey = `lastWithDraw:{${userId}}`;
-    console.log("lastWithdrawKey", lastWithdrawKey);
 
     // 1. Primary Check: Try to get the timestamp from Redis (the fast path)
     const lastWithdrawTimestampString = await redisPayment.getkeydata(lastWithdrawKey);
@@ -470,6 +469,14 @@ exports.requestWithdrawNewKafkaJune = async (req) => {
       };
     }
 
+    if (Number(req.body.amount) < 200) {
+      return {
+        message: `Minimum withdrawal amount is 200.`,
+        status: false,
+        data: {},
+      };
+    }
+
     let userbalance = await redisUser.redis.hgetall(`wallet:{${userId}}`);
     if (!userbalance) {
       await redisUser.setDbtoRedisWallet(userId);
@@ -477,76 +484,48 @@ exports.requestWithdrawNewKafkaJune = async (req) => {
     }
 
     let paymentMode = "";
-    // let ifsc = hasUser.bank.ifsc;
-    // let bankBranches = await redisMain.getkeydata('bank-branches');
+    const BANK_CODE_BY_NAME = {
+      "canara bank": "IDPT0001",
+      "dcb bank": "IDPT0002",
+      "federal bank": "IDPT0003",
+      "hdfc bank": "IDPT0004",
+      "punjab national bank": "IDPT0005",
+      "indian bank": "IDPT0006",
+      "icici bank": "IDPT0007",
+      "syndicate bank": "IDPT0008",
+      "karur vysya bank": "IDPT0009",
+      "union bank of india": "IDPT0010",
+      "kotak mahindra bank": "IDPT0011",
+      "idfc first bank": "IDPT0012",
+      "andhra bank": "IDPT0013",
+      "karnataka bank": "IDPT0014",
+      "icici corporate bank": "IDPT0015",
+      "axis bank": "IDPT0016",
+      "uco bank": "IDPT0017",
+      "south indian bank": "IDPT0018",
+      "yes bank": "IDPT0019",
+      "standard chartered bank": "IDPT0020",
+      "state bank of india": "IDPT0021",
+      "indian overseas bank": "IDPT0022",
+      "bandhan bank": "IDPT0023",
+      "central bank of india": "IDPT0024",
+      "bank of baroda": "IDPT0025"
+    };
 
-    // if (!bankBranches) {
-    //   // Load from database if not in Redis
-    //   bankBranches = await branchInfoModel.find().lean();
+    const bankCode =
+      BANK_CODE_BY_NAME[
+      hasUser?.bank?.bankname
+        ?.toLowerCase()
+        .replace(/\s+/g, " ")
+        .trim()
+      ];
 
-    //   if (bankBranches.length) {
-    //     await redisMain.setkeydata('bank-branches', JSON.stringify(bankBranches), 432000); // cache for 60 hours
-    //   }
-    // }
-
-    // // Try to find the branch in loaded data
-    // let parsedData = JSON.parse(bankBranches);
-    // let matchedBranch = parsedData.find(branch => branch.ifsc === ifsc);
-
-    // // If still not found, fetch from Razorpay IFSC API (do not store this data)
-    // if (!matchedBranch) {
-    //   try {
-    //     const response = await axios.get(`https://ifsc.razorpay.com/${ifsc}`);
-    //     const data = response.data;
-
-    //     if (data.IMPS) {
-    //       paymentMode = "IMPS";
-    //     } else if (data.NEFT) {
-    //       paymentMode = "NEFT";
-    //     } else {
-    //       return {
-    //         success: false,
-    //         message: "IMPS or NEFT mode is not available on your bank account."
-    //       };
-    //     }
-    //   } catch (error) {
-    //     return {
-    //       success: false,
-    //       message: "IMPS or NEFT mode is not available on your bank account."
-    //     };
-    //   }
-    // } else {
-    //   // Check from Redis or DB
-    //   if (matchedBranch.imps) {
-    //     paymentMode = "IMPS";
-    //   } else if (matchedBranch.neft) {
-    //     paymentMode = "NEFT";
-    //   } else {
-    //     return {
-    //       success: false,
-    //       message: "IMPS and NEFT payment modes are not available on your bank account."
-    //     };
-    //   }
-    // }
-
-    // let disabledBanks = await redisMain.getkeydata('disabledBanks');
-
-    // if (!disabledBanks) {
-    //   disabledBanks = await bankDetailsModel.find({ status: 0 }).select("name status");
-    //   await redisMain.setkeydata('disabledBanks', JSON.stringify(disabledBanks), 432000);
-    // } else {
-    //   disabledBanks = JSON.parse(disabledBanks);
-    // }
-
-    // // Check if the bank name exists in disabledBanks
-    // const matchedBank = disabledBanks.some(bank => bank.name === hasUser.bank.bankname);
-
-    // if (matchedBank) {
-    //   return {
-    //     status: false,
-    //     message: "Withdrawals on this bank account are not available right now."
-    //   };
-    // }
+    if (!bankCode) {
+      return {
+        status: false,
+        message: "Withdrawals are not supported for this bank."
+      };
+    }
 
     // Condition 4
     if (userbalance.winning < Number(req.body.amount)) {
@@ -768,7 +747,7 @@ exports.requestWithdrawNewKafkaJune = async (req) => {
       userid: req.user._id,
       amount: currentWithdrawingAmount,
       withdraw_req_id: withdrawId,
-      withdrawfrom: 'Razorpay-X',
+      withdrawfrom: 'WatchPay',
       transfer_id: transactionId,
       tds_amount: 0,
       idempotency_key: uuidv4(),

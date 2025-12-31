@@ -17,7 +17,7 @@ router.get("/", (req, res) => {
 
 router.get("/db-health-check", MatchController.dbCheck);
 
-router.get("/fetch-completed-matches-list", auth, MatchController.fetchCompletedMatchesList);
+router.get("/fetch-completed-matches-list", auth, MatchController.fetchCompletedMatchData);
 
 router.get("/fetch-completed-duo-match-list", auth, MatchController.fetchCompletedDuoMatches);
 

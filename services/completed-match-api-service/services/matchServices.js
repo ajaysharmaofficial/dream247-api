@@ -621,7 +621,7 @@ class matchServices {
         },
         {
           $addFields: {
-            joinedcontest: { $size: "$joinedcontest" } // Count unique challenge IDs
+            joinedcontest: { $size: "$joinedcontest" }
           }
         }, {
           '$lookup': {
@@ -650,7 +650,7 @@ class matchServices {
           }
         }, {
           '$lookup': {
-            'from': 'userteam',
+            'from': 'userteams',
             'let': {
               'matchkey': '$_id'
             },
@@ -834,7 +834,7 @@ class matchServices {
           $limit: limit
         }
       ];
-      // console.log(JSON.stringify(aggPipe));
+      console.log(JSON.stringify(aggPipe));
       const JoiendMatches = await userLeaderBoardModel.aggregate(aggPipe);
       if (JoiendMatches.length === 0) {
         return {

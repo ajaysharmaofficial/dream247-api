@@ -446,6 +446,7 @@ exports.fetchNotifications = async (req) => {
       Obj._id = key._id;
       Obj.userid = key.userid;
       Obj.title = key.title;
+      Obj.description = key.transaction_id;
       Obj.seen = key.seen;
       Obj.module = "";
       Obj.createdAt = new Date(

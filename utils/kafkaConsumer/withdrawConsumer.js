@@ -81,13 +81,6 @@ const processPayouts = async () => {
                                     console.log(`Withdrawal ${alreadyExistingWithdraw.withdraw_req_id} already processed. Skipping.`);
                                     return message.offset;
                                 }
-
-                                // await userModel.findOneAndUpdate(
-                                //   { _id: user._id },
-                                //   { $inc: { "userbalance.winning": -amount } },
-                                //   { new: true }
-                                // );
-
                                 const addedWithdraw = await payoutModel.findOneAndUpdate(
                                     { withdraw_req_id: withdrawalData.withdraw_req_id },
                                     withdrawalData,
@@ -101,10 +94,6 @@ const processPayouts = async () => {
                                     addedWithdraw.createdAt.toISOString()
                                 );
                                 console.log("okkk", okkk);
-
-
-
-
                                 let paymentDataRedis = await redisPayment.getTDSdata(user._id);
 
                                 let lastTxn = await walletTransactionModel.findOne({ userid: user._id }).sort({ createdAt: -1 }).select('total_available_amt');
@@ -121,35 +110,57 @@ const processPayouts = async () => {
                                     await redisUser.setDbtoRedisWallet(user._id);
                                     userbalanceFromRedis = await redisUser.redis.hgetall(`wallet:{${user._id}}`);
                                 }
-
-                                // let lastTxnBalance = Number(lastTxn?.total_available_amt) || Number(userbalanceFromRedis.winning);
-                                // let consumedBalance = Number(amount) + Number(currentTxn.total_available_amt);
-
-                                // console.log("consumedBalance", consumedBalance);
-                                // console.log("Number(lastTxnBalance) === Number(consumedBalance)", Number(lastTxnBalance) === Number(consumedBalance));
-
-                                // if (lastTxnBalance.toFixed(2) === consumedBalance.toFixed(2)) {
                                 if (!duplicateWithdrawal) {
                                     const withdrawReqId = withdrawalData.withdraw_req_id;
-
-                                    // ➤ IF ENVIRONMENT IS PROD, TRIGGER PAYOUT
-                                    if (process.env.secretManager === "dev") {
-                                        console.log("🔐 Production mode detected, starting Razorpay payout flow");
+                                    if (process.env.secretManager === "prod") {
+                                        console.log("🔐 Production mode detected, starting watchpay payout...");
 
                                         try {
                                             const WATCHPAY_URL = 'https://api.watchglb.com/pay/transfer'
-                                            const WATCHPAY_PAYMENT_KEY = global.constant.WATCHPAY_PAYMENT_KEY;  // your merchant key
-                                            const WATCHPAY_MERCHANT_KEY = global.constant.WATCHPAY_MERCHANT_KEY;  // your merchant key
+                                            const WATCHPAY_PAYOUT_KEY = global.constant.WATCHPAY_PAYOUT_KEY;
+                                            const WATCHPAY_MERCHANT_KEY = global.constant.WATCHPAY_MERCHANT_KEY;
 
+                                            const BANK_CODE_BY_NAME = {
+                                                "canara bank": "IDPT0001",
+                                                "dcb bank": "IDPT0002",
+                                                "federal bank": "IDPT0003",
+                                                "hdfc bank": "IDPT0004",
+                                                "punjab national bank": "IDPT0005",
+                                                "indian bank": "IDPT0006",
+                                                "icici bank": "IDPT0007",
+                                                "syndicate bank": "IDPT0008",
+                                                "karur vysya bank": "IDPT0009",
+                                                "union bank of india": "IDPT0010",
+                                                "kotak mahindra bank": "IDPT0011",
+                                                "idfc first bank": "IDPT0012",
+                                                "andhra bank": "IDPT0013",
+                                                "karnataka bank": "IDPT0014",
+                                                "icici corporate bank": "IDPT0015",
+                                                "axis bank": "IDPT0016",
+                                                "uco bank": "IDPT0017",
+                                                "south indian bank": "IDPT0018",
+                                                "yes bank": "IDPT0019",
+                                                "standard chartered bank": "IDPT0020",
+                                                "state bank of india": "IDPT0021",
+                                                "indian overseas bank": "IDPT0022",
+                                                "bandhan bank": "IDPT0023",
+                                                "central bank of india": "IDPT0024",
+                                                "bank of baroda": "IDPT0025"
+                                            };
+
+                                            const normalizedBankName = user?.bank?.bankname
+                                                ?.toLowerCase()
+                                                .replace(/\s+/g, " ")
+                                                .trim();
 
                                             let apply_date = moment().format('YYYY-MM-DD HH:mm:ss');
                                             let transfer_amount = amount;
-                                            let bank_code = 'MAHB0001203';
+                                            let bank_code = BANK_CODE_BY_NAME[normalizedBankName];
                                             let mch_id = WATCHPAY_MERCHANT_KEY;
                                             let mch_transferId = withdrawReqId;
-                                            let receive_account = ' 20113422675';
-                                            let receive_name = 'RATTAN LAL AGGARWAL';
-                                            let remark = 'Test';
+                                            let receive_account = user.bank.accno;
+                                            let receive_name = user.bank.accountholder;
+                                            let remark = user.bank.ifsc;
 
                                             // -------------------------
                                             // Build Sign String (same as PHP)
@@ -163,10 +174,8 @@ const processPayouts = async () => {
                                             signStr += `receive_name=${receive_name}&`;
                                             signStr += `remark=${remark}&`;
                                             signStr += `transfer_amount=${transfer_amount}`;
-                                            console.log('signStr-------->>>>>', signStr);
 
-                                            const sign = await generateMD5Sign(signStr, WATCHPAY_PAYMENT_KEY);
-                                            console.log('sign-------->>>>>', sign);
+                                            const sign = await generateMD5Sign(signStr, WATCHPAY_PAYOUT_KEY);
                                             const payload = {
                                                 apply_date,
                                                 bank_code,
@@ -179,8 +188,6 @@ const processPayouts = async () => {
                                                 sign_type: "MD5",
                                                 sign,
                                             };
-                                            console.log("💸 Initiating Payout for withdrawReqId:", withdrawReqId);
-                                            console.log('payload-------->>>>>', payload);
                                             const payoutRes = await axios.post(
                                                 WATCHPAY_URL,
                                                 new URLSearchParams(payload).toString(),
@@ -188,91 +195,138 @@ const processPayouts = async () => {
                                                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
                                                 }
                                             );
-                                            console.log("✅ Payout Success:", payoutRes);
+                                            const receivedAt = new Date();
+                                            if (!payoutRes?.data || payoutRes.data.respCode !== "SUCCESS") {
+                                                console.error("❌ Watchpay Payout Failed:", payoutRes?.data);
 
-                                            // const receivedAt = new Date(payoutRes.data.created_at * 1000);
-                                            // await payoutModel.updateOne(
-                                            //     { withdraw_req_id: withdrawReqId },
-                                            //     {
-                                            //         payout_id: payoutRes.data.id,
-                                            //         status_description: payoutRes.data.status,
-                                            //         fees: payoutRes.data.fees / 100,
-                                            //         tax: payoutRes.data.tax / 100,
-                                            //         receivedTime: receivedAt,
-                                            //     }
-                                            // );
-                                            console.log("📝 Withdrawal record updated with payout info");
+                                                if (withdrawalData.status === 2) {
+                                                    console.log("⚠️ Refund already done, skipping:", withdrawReqId);
+                                                    return message.offset;
+                                                }
+                                                await payoutModel.updateOne(
+                                                    { withdraw_req_id: withdrawReqId },
+                                                    {
+                                                        status: 2,
+                                                        status_description: payoutRes?.data?.respMsg || "Payout failed",
+                                                        receivedTime: receivedAt,
+                                                        withdrawfrom: "WatchPay"
+                                                    }
+                                                );
+                                                await walletTransactionModel.updateOne(
+                                                    { transaction_id: transactionData.transaction_id },
+                                                    { paymentstatus: global.constant.PAYMENT_STATUS_TYPES.FAILED }
+                                                );
+                                                await userModel.updateOne(
+                                                    { _id: user._id },
+                                                    {
+                                                        $inc: {
+                                                            "userbalance.winning": Number(withdrawalData.amount)
+                                                        }
+                                                    }
+                                                );
 
-                                        } catch (err) {
-                                            console.error("❌ Error during Razorpay Payout Flow:");
-                                            if (err?.response) {
-                                                console.error("🧾 Razorpay Error Response:", err.response.data);
-                                                console.error("📄 Status:", err.response.status);
-                                            } else {
-                                                console.error("🔍 General Error:", err.message);
+                                                // 4️⃣ Create REFUND transaction entry (IMPORTANT ✅)
+                                                const refundTransaction = {
+                                                    userid: user._id,
+                                                    amount: withdrawalData.amount,
+                                                    withdraw_amt: 0,
+                                                    cons_win: withdrawalData.amount,
+                                                    transaction_id: `${withdrawReqId}_REFUND`,
+                                                    type: 'Amount Withdraw Refund',
+                                                    transaction_by: global.constant.TRANSACTION_BY.WALLET,
+                                                    paymentstatus: global.constant.PAYMENT_STATUS_TYPES.SUCCESS,
+                                                    bal_fund_amt: Number(userbalanceFromRedis.balance).toFixed(2),
+                                                    bal_win_amt: (
+                                                        Number(userbalanceFromRedis.winning) +
+                                                        Number(withdrawalData.amount)
+                                                    ).toFixed(2),
+                                                    bal_bonus_amt: Number(userbalanceFromRedis.bonus).toFixed(2),
+                                                    total_available_amt: (
+                                                        Number(userbalanceFromRedis.balance) +
+                                                        Number(userbalanceFromRedis.bonus) +
+                                                        Number(userbalanceFromRedis.winning) +
+                                                        Number(withdrawalData.amount)
+                                                    ).toFixed(2),
+                                                    tds_amount: 0
+                                                };
+
+                                                await walletTransactionModel.create(refundTransaction);
+
+                                                const refundTxnRedis = {
+                                                    txnid: withdrawReqId,
+                                                    transaction_id: refundTransaction.transaction_id,
+                                                    type: "Amount Withdraw Refund",
+                                                    transaction_type: "Credit",
+                                                    amount: withdrawalData.amount,
+                                                    userid: user._id,
+                                                    paymentmethod: "WatchPay",
+                                                    paymentstatus: "success",
+                                                    tds_amount: 0
+                                                };
+
+                                                const walletAfterRefund = {
+                                                    balance: Number(userbalanceFromRedis.balance),
+                                                    bonus: Number(userbalanceFromRedis.bonus),
+                                                    winning:
+                                                        Number(userbalanceFromRedis.winning) +
+                                                        Number(withdrawalData.amount),
+                                                };
+
+                                                await redisUser.saveTransactionToRedis(
+                                                    user._id,
+                                                    walletAfterRefund,
+                                                    refundTxnRedis
+                                                );
+
+                                                console.log("🔁 Withdrawal FAILED & REFUNDED (DB + Redis):", withdrawReqId);
+                                                return message.offset;
                                             }
-                                            throw err;
+                                            else {
+                                                await payoutModel.updateOne(
+                                                    { withdraw_req_id: withdrawReqId },
+                                                    {
+                                                        payout_id: payoutRes.data.tradeNo,
+                                                        status_description: 'processed',
+                                                        receivedTime: receivedAt,
+                                                        utr: payoutRes.data.tradeNo,
+                                                        status: 1,
+                                                        withdrawfrom: "WatchPay"
+                                                    }
+                                                );
+                                                await walletTransactionModel.updateOne(
+                                                    { transaction_id: transactionData.transaction_id },
+                                                    {
+                                                        paymentstatus: "success"
+                                                    }
+                                                );
+
+                                                const transactionDataRedis = {
+                                                    txnid: withdrawalData.withdraw_req_id,
+                                                    transaction_id: withdrawalData.withdraw_req_id,
+                                                    type: "Amount Withdraw",
+                                                    transaction_type: "Debit",
+                                                    amount: withdrawalData.amount,
+                                                    userid: user._id,
+                                                    paymentmethod: "WatchPay",
+                                                    paymentstatus: "success",
+                                                    tds_amount: withdrawalData.tds_amount || 0
+                                                };
+                                                const walletUpdateSuccess = {
+                                                    balance: Number(userbalanceFromRedis.balance),
+                                                    bonus: Number(userbalanceFromRedis.bonus),
+                                                    winning: Number(userbalanceFromRedis.winning),
+                                                };
+                                                await redisUser.saveTransactionToRedis(
+                                                    user._id,
+                                                    walletUpdateSuccess,
+                                                    transactionDataRedis
+                                                );
+                                                console.log("📝 Withdrawal record updated with payout info");
+                                            }
+                                        } catch (err) {
+                                            console.error("❌ Watchpay payout error", err?.response?.data || err.message);
+                                            return message.offset;
                                         }
-                                    } else {
-                                        // ✅ Simulated payout in dev/test mode
-                                        const receivedAt = new Date();
-                                        let processedPayment = await payoutModel.findOneAndUpdate(
-                                            { withdraw_req_id: addedWithdraw.withdraw_req_id },
-                                            {
-                                                payout_id: "dev_dummy_payout_id",
-                                                status_description: "processed",
-                                                fees: 0,
-                                                tax: 0,
-                                                withdrawfrom: "system",
-                                                receivedTime: receivedAt,
-                                                utr: "999999999999",
-                                                status: 1,
-                                            },
-                                            { new: true }
-                                        );
-
-                                        const transactionDataRedis = {
-                                            txnid: withdrawalData.withdraw_req_id,
-                                            transaction_id: withdrawalData.withdraw_req_id,
-                                            type: "Amount Withdraw",
-                                            transaction_type: "Debit",
-                                            amount: withdrawalData.amount,
-                                            userid: withdrawalData.userid,
-                                            paymentmethod: withdrawalData.withdrawfrom,
-                                            paymentstatus: "success",
-                                            utr: '999999999999',
-                                            tds_amount: withdrawalData.tds_amount || 0
-                                        };
-
-                                        let userbalanceFromRedis = await redisUser.redis.hgetall(`wallet:{${user._id}}`);
-                                        if (!userbalanceFromRedis) {
-                                            await redisUser.setDbtoRedisWallet(user._id);
-                                            userbalanceFromRedis = await redisUser.redis.hgetall(`wallet:{${user._id}}`);
-                                        }
-
-                                        // Updating in Redis
-                                        const walletUpdateSuccess = {
-                                            balance: Number(userbalanceFromRedis.balance),
-                                            bonus: Number(userbalanceFromRedis.bonus),
-                                            winning: Number(userbalanceFromRedis.winning),
-                                        };
-
-                                        redisUser.saveTransactionToRedis(user._id, walletUpdateSuccess, transactionDataRedis);
-
-                                        await redisPayment.updatedPaymentData(user._id, processedPayment);
-
-                                        let paymentDataRedis = await redisPayment.getTDSdata(user._id);
-
-                                        let amountWithTDS = Number(withdrawalData.amount) + Number(withdrawalData.tds_amount);
-
-                                        let tdsWallet = {
-                                            successPayment: Number(paymentDataRedis.successPayment) || 0,
-                                            successWithdraw: (Number(paymentDataRedis.successWithdraw) || 0) + Number(amountWithTDS),
-                                            tdsPaid: (Number(paymentDataRedis?.tdsPaid) || 0) + Number(withdrawalData.tds_amount)
-                                        }
-
-                                        await redisPayment.updateTDSdata(user._id, tdsWallet);
-                                        console.log(`🧪 [DEV] Simulated payout for ${addedWithdraw.withdraw_req_id}`);
                                     }
                                 }
                                 else {
@@ -281,7 +335,7 @@ const processPayouts = async () => {
                                         { withdraw_req_id: addedWithdraw.withdraw_req_id },
                                         {
                                             status_description: "cancelled",
-                                            withdrawfrom: "Razorpay-X",
+                                            withdrawfrom: "WatchPay",
                                             receivedTime: receivedAt,
                                             status: 4,
                                             comment: "Withdrawal cancelled due to unknown source.",

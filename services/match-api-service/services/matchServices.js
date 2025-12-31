@@ -1030,7 +1030,7 @@ class matchServices {
             const matchDate = moment(match.time_start).format("YYYY-MM-DD HH:mm:ss");
             return matchDate > filterDate;
           })
-          .sort((a, b) => new Date(a.match_order) - new Date(b.match_order));
+          .sort((a, b) => new Date(a.time_start) - new Date(b.time_start));
 
         // apply query filters
         if (isRecommended) {
@@ -1081,6 +1081,25 @@ class matchServices {
             team2: ["$teamB"],
           },
         });
+
+        matchpipe.push(
+          {
+            $lookup: {
+              from: "teams",
+              localField: "team1Id",
+              foreignField: "_id",
+              as: "team1Data",
+            },
+          },
+          {
+            $lookup: {
+              from: "teams",
+              localField: "team2Id",
+              foreignField: "_id",
+              as: "team2Data",
+            },
+          }
+        );
         matchpipe.push({
           $match: {
             $expr: { $and: [{ $gte: ["$date", today] }] },
@@ -1117,13 +1136,13 @@ class matchServices {
             playing11_status: 1,
             team1color: {
               $ifNull: [
-                { $arrayElemAt: ["$team1.color", 0] },
+                { $arrayElemAt: ["$team1Data.color", 0] },
                 global.constant.TEAM_DEFAULT_COLOR.DEF1,
               ],
             },
             team2color: {
               $ifNull: [
-                { $arrayElemAt: ["$team2.color", 0] },
+                { $arrayElemAt: ["$team2Data.color", 0] },
                 global.constant.TEAM_DEFAULT_COLOR.DEF1,
               ],
             },

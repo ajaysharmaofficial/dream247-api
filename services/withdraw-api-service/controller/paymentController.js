@@ -358,8 +358,8 @@ exports.financialTDSdeduction = async (req, res, next) => {
 
 exports.razorpayXpayoutStatus = async (req, res, next) => {
     try {
-        const RAZORPAY_KEY = 'rzp_live_WkhCclk49ulZYz';
-        const RAZORPAY_SECRET = 'RYNTQRxCeCHIotWo5fKDCQvX';
+        const RAZORPAY_KEY = '';
+        const RAZORPAY_SECRET = '';
 
         // Encode API Key and Secret for Basic Auth
         const authHeader = `Basic ${Buffer.from(`${RAZORPAY_KEY}:${RAZORPAY_SECRET}`).toString('base64')}`;
@@ -598,8 +598,8 @@ exports.razorpayXpayoutStatus = async (req, res, next) => {
 
 exports.razorpayXpayoutStatusCheck = async (req, res) => {
     try {
-        const RAZORPAY_KEY = 'rzp_live_WkhCclk49ulZYz';
-        const RAZORPAY_SECRET = 'RYNTQRxCeCHIotWo5fKDCQvX';
+        const RAZORPAY_KEY = '';
+        const RAZORPAY_SECRET = '';
 
         // Encode API Key and Secret for Basic Auth
         const authHeader = `Basic ${Buffer.from(`${RAZORPAY_KEY}:${RAZORPAY_SECRET}`).toString('base64')}`;

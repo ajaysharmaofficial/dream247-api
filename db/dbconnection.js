@@ -5,7 +5,6 @@ exports.connectDB = async () => {
     try {
         console.log(global.constant.DB_URL);
         const conn = await mongoose.connect(`${global.constant.DB_URL}`, {
-        // const conn = await mongoose.connect(`mongodb://localhost:27017/wpo11Db-prod`, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
             readPreference: "secondaryPreferred", // Set default read preference for all queries

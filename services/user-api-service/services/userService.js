@@ -1197,15 +1197,15 @@ exports.userCompleteDetails = async (req) => {
     // chack all cond
     if (
       userData.user_verify.mobile_verify ==
-        global.constant.PROFILE_VERIFY_EMAIL_MOBILE.VERIFY &&
+      global.constant.PROFILE_VERIFY_EMAIL_MOBILE.VERIFY &&
       userData.user_verify.email_verify ==
-        global.constant.PROFILE_VERIFY_EMAIL_MOBILE.VERIFY &&
+      global.constant.PROFILE_VERIFY_EMAIL_MOBILE.VERIFY &&
       userData.user_verify.pan_verify ==
-        global.constant.PROFILE_VERIFY_PAN_BANK.APPROVE &&
+      global.constant.PROFILE_VERIFY_PAN_BANK.APPROVE &&
       userData.user_verify.bank_verify ==
-        global.constant.PROFILE_VERIFY_PAN_BANK.APPROVE &&
+      global.constant.PROFILE_VERIFY_PAN_BANK.APPROVE &&
       userData.user_verify.aadhar_verify ==
-        global.constant.PROFILE_VERIFY_AADHAR_BANK.APPROVE
+      global.constant.PROFILE_VERIFY_AADHAR_BANK.APPROVE
     ) {
       verified = 1;
     } else {
@@ -1285,13 +1285,13 @@ exports.userCompleteDetails = async (req) => {
           userData.download_apk || global.constant.DOWNLOAD_APK.FALSE,
         emailfreeze:
           userData.email != "" &&
-          userData.user_verify.email_verify ==
+            userData.user_verify.email_verify ==
             global.constant.PROFILE_VERIFY_EMAIL_MOBILE.VERIFY
             ? global.constant.FREEZE.TRUE
             : global.constant.FREEZE.FALSE,
         mobilefreeze:
           userData.mobile != "" &&
-          userData.user_verify.mobile_verify ==
+            userData.user_verify.mobile_verify ==
             global.constant.PROFILE_VERIFY_EMAIL_MOBILE.VERIFY
             ? global.constant.FREEZE.TRUE
             : global.constant.FREEZE.FALSE,
@@ -1302,12 +1302,12 @@ exports.userCompleteDetails = async (req) => {
         AadharVerified: userData.user_verify.aadhar_verify,
         statefreeze:
           userData.user_verify.bank_verify ==
-          global.constant.PROFILE_VERIFY_PAN_BANK.APPROVE
+            global.constant.PROFILE_VERIFY_PAN_BANK.APPROVE
             ? global.constant.FREEZE.TRUE
             : global.constant.FREEZE.FALSE,
         dobfreeze:
           userData.user_verify.pan_verify ==
-          global.constant.PROFILE_VERIFY_PAN_BANK.APPROVE
+            global.constant.PROFILE_VERIFY_PAN_BANK.APPROVE
             ? global.constant.FREEZE.TRUE
             : global.constant.FREEZE.FALSE,
         totalrefers: userData.totalrefercount, //#ReferUserCount of the join application throw referId
@@ -2060,7 +2060,7 @@ exports.userOwnTransactions = async (req) => {
         },
         {
           $lookup: {
-            from: "payout",
+            from: "payouts",
             localField: "transaction_id",
             foreignField: "transfer_id",
             as: "withdrawData",
@@ -2499,9 +2499,7 @@ exports.myRedisTransaction = async (req) => {
 
   // 1. Get list of transactionIds
   // const transactionIds = await redisTransaction.redis.lrange(listKey, 0, -1);
-  const transactionIds = await redisTransaction.redis.zrange(listKey, 0, -1, {
-    rev: true,
-  });
+  const transactionIds = await redisTransaction.redis.zrange(listKey, 0, -1, "REV");
   // const transactionIds = await redisTransaction.redis.zrevrange(listKey, 0, -1); // latest first
   // console.log("transactionIds", transactionIds);
   // 2. Fetch corresponding transactions from hashes
@@ -3634,9 +3632,9 @@ exports.userWalletDetails = async (req, res) => {
     const verify = parsedUser.user_verify || {};
     const allverify =
       verify.mobile_verify == 1 &&
-      verify.email_verify == 1 &&
-      verify.pan_verify == 1 &&
-      verify.bank_verify == 1
+        verify.email_verify == 1 &&
+        verify.pan_verify == 1 &&
+        verify.bank_verify == 1
         ? 1
         : 0;
 

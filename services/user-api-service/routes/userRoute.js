@@ -32,7 +32,7 @@ router.get("/get-all-user-refer-codes", auth, userController.getUserReferCode);
 
 router.post("/edit-user-profile", auth, userController.editUserProfile);
 
-router.get("/my-redis-transaction", auth, userController.myRedisTransaction);
+router.get("/my-redis-transaction", auth, userController.userOwnTransactions);
 
 router.get("/my-transactions", auth, userController.userOwnTransactions);
 
