@@ -186,24 +186,36 @@
 if (process.env.redisEnv == 'live') {
   const Redis = require("ioredis");
 
-  const redis = new Redis.Cluster([
-    { host: global.constant.REDIS_HOST, port: 6379 }
-  ], {
-    dnsLookup: (address, callback) => callback(null, address),
-    redisOptions: {
-      tls: true,
-      password: "",
-      enableAutoPipelining: true,
-    },
-  });
+  let redis;
 
-  redis.cluster("slots", (err, slots) => {
-    if (err) {
-      console.error("Cluster slot refresh failed", err);
-    } else {
-      console.log("Cluster slots refreshed");
-    }
-  });
+  if (process.env.REDIS_PROVIDER === "upstash") {
+    redis = new Redis(process.env.UPSTASH_REDIS_REST_URL, {
+      enableAutoPipelining: true,
+    });
+
+    console.log("🚀 Using Upstash Redis");
+
+  } else {
+    redis = new Redis.Cluster([
+      { host: global.constant.REDIS_HOST, port: 6379 }
+    ], {
+      dnsLookup: (address, callback) => callback(null, address),
+      redisOptions: {
+        tls: true,
+        password: "",
+        enableAutoPipelining: true,
+      },
+    });
+
+    console.log("🚀 Using AWS Redis Cluster");
+    redis.cluster("slots", (err) => {
+      if (err) {
+        console.error("Cluster slot refresh failed", err);
+      } else {
+        console.log("Cluster slots refreshed");
+      }
+    });
+  }
 
   redis.on("connect", () => {
     console.log("Connected to Redis");

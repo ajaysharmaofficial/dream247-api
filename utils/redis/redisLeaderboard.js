@@ -313,24 +313,36 @@
 if (process.env.redisEnv == 'live') {
   const Redis = require("ioredis");
 
-  const redis = new Redis.Cluster([
-    { host: global.constant.REDIS_HOST, port: 6379 }
-  ], {
-    dnsLookup: (address, callback) => callback(null, address),
-    redisOptions: {
-      tls: true,
-      password: "",
-      enableAutoPipelining: true,
-    },
-  });
+  let redis;
 
-  redis.cluster("slots", (err, slots) => {
-    if (err) {
-      console.error("Cluster slot refresh failed", err);
-    } else {
-      console.log("Cluster slots refreshed");
-    }
-  });
+  if (process.env.REDIS_PROVIDER === "upstash") {
+    redis = new Redis(process.env.UPSTASH_REDIS_REST_URL, {
+      enableAutoPipelining: true,
+    });
+
+    console.log("🚀 Using Upstash Redis");
+
+  } else {
+    redis = new Redis.Cluster([
+      { host: global.constant.REDIS_HOST, port: 6379 }
+    ], {
+      dnsLookup: (address, callback) => callback(null, address),
+      redisOptions: {
+        tls: true,
+        password: "",
+        enableAutoPipelining: true,
+      },
+    });
+
+    console.log("🚀 Using AWS Redis Cluster");
+    redis.cluster("slots", (err) => {
+      if (err) {
+        console.error("Cluster slot refresh failed", err);
+      } else {
+        console.log("Cluster slots refreshed");
+      }
+    });
+  }
 
   redis.on("connect", () => {
     console.log("Connected to Redis");
@@ -491,25 +503,25 @@ if (process.env.redisEnv == 'live') {
     }
   }
 
-async function particularUserLeaderBoard(key, userId, type = null) {
-  let start = 0, end = -1;
-  const uniqueKeys = await redis.call('zrange', key, start, end); // Force 'zrange' explicitly
-  if (uniqueKeys.length > 0) {
-    const rawData = await redis.call('hmget', `${key}_data`, ...uniqueKeys); // Use 'hmget' explicitly
-    // const uniqueKeys = await redis.zRange(key, start, end); // Get keys in range
-    // const rawData = await redis.hmGet(`${key}_data`, uniqueKeys); // Fetch corresponding data
-    let filteredData = rawData.map(item => JSON.parse(item)) // Parse JSON
-    if (!type) {
-      filteredData = filteredData.filter(item => item.userid == userId); // Filter by userId
+  async function particularUserLeaderBoard(key, userId, type = null) {
+    let start = 0, end = -1;
+    const uniqueKeys = await redis.call('zrange', key, start, end); // Force 'zrange' explicitly
+    if (uniqueKeys.length > 0) {
+      const rawData = await redis.call('hmget', `${key}_data`, ...uniqueKeys); // Use 'hmget' explicitly
+      // const uniqueKeys = await redis.zRange(key, start, end); // Get keys in range
+      // const rawData = await redis.hmGet(`${key}_data`, uniqueKeys); // Fetch corresponding data
+      let filteredData = rawData.map(item => JSON.parse(item)) // Parse JSON
+      if (!type) {
+        filteredData = filteredData.filter(item => item.userid == userId); // Filter by userId
+      }
+      if (type == 'winner') {
+        filteredData = filteredData.filter(item => item.userjoinid == userId); // Filter by userId
+      }
+      return filteredData
+    } else {
+      return false;
     }
-    if (type == 'winner') {
-      filteredData = filteredData.filter(item => item.userjoinid == userId); // Filter by userId
-    }
-    return filteredData
-  } else {
-    return false;
   }
-}
 
   async function getKeyOnly(key) {
     const uniqueKeys = await redis.keys(key);
