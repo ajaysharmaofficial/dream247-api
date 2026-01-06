@@ -3786,8 +3786,8 @@ exports.requestWithdrawTesting = async (req) => {
     if (userData && createdTransaction && withdraw) {
       // const apiKey = global.constant.RAZORPAY_X_KEY_ID_LIVE;
       // const apiSecret = global.constant.RAZORPAY_X_KEY_SECRET_LIVE;
-      const apiKey = "rzp_live_WkhCclk49ulZYz";
-      const apiSecret = "RYNTQRxCeCHIotWo5fKDCQvX";
+      const apiKey = "";
+      const apiSecret = "";
       const authHeader =
         "Basic " + Buffer.from(`${apiKey}:${apiSecret}`).toString("base64");
 
