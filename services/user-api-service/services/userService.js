@@ -483,9 +483,9 @@ async function sendOTPOld(mobile, otp) {
 async function sendOTP(mobile, otp) {
   try {
     // console.log(mobile, "----mobile---->>")
-    const SMS_AUTH_KEY = process.env.SMS_AUTH_KEY;
-    const SMS_SENDERID = process.env.SMS_SENDERID;
-    const DLT_TE_ID = process.env.DLT_TE_ID;
+    // const SMS_AUTH_KEY = process.env.SMS_AUTH_KEY;
+    // const SMS_SENDERID = process.env.SMS_SENDERID;
+    // const DLT_TE_ID = process.env.DLT_TE_ID;
 
     const message = `${otp} Login OTP. Please do not share with anyone Xam Tech`;
 
@@ -612,19 +612,19 @@ exports.addTempUser = async (req) => {
         ? Math.floor(100000 + Math.random() * 900000)
         : 123456;
 
-    if (reqMobile == "9462636977") {
+    // if (reqMobile == "9462636977") {
       otp = 123456;
-    }
+    // }
 
-    if (process.env.secretManager === "prod") {
-      const smsResponse = await sendOTP(reqMobile, otp);
-      if (!smsResponse)
-        return {
-          status: false,
-          message: "Failed to send OTP. Please try again.",
-          data: [],
-        };
-    }
+    // if (process.env.secretManager === "prod") {
+    //   const smsResponse = await sendOTP(reqMobile, otp);
+    //   if (!smsResponse)
+    //     return {
+    //       status: false,
+    //       message: "Failed to send OTP. Please try again.",
+    //       data: [],
+    //     };
+    // }
 
     // Update or create temp user
     // const tempUser = await tempuserModel.findOneAndUpdate(
@@ -694,20 +694,20 @@ exports.loginUser = async (req, user) => {
         ? Math.floor(100000 + Math.random() * 900000)
         : 123456;
 
-    if (mobile == "9462636977") {
+    // if (mobile == "9462636977") {
       otp = 123456;
-    }
+    // }
 
-    if (process.env.secretManager === "prod") {
-      const smsResponse = await sendOTP(mobile, otp);
+    // if (process.env.secretManager === "prod") {
+    //   const smsResponse = await sendOTP(mobile, otp);
 
-      if (!smsResponse)
-        return {
-          status: false,
-          message: "Failed to send OTP. Please try again.",
-          data: [],
-        };
-    }
+    //   if (!smsResponse)
+    //     return {
+    //       status: false,
+    //       message: "Failed to send OTP. Please try again.",
+    //       data: [],
+    //     };
+    // }
     let keyname = `otp-${mobile}`;
     let otpData = { code: otp };
     redisUser.setkeydata(keyname, otpData, 60 * 60);
