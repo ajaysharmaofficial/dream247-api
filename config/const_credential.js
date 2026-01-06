@@ -432,6 +432,8 @@ const credentials = {
   WATCHPAY_PAYMENT_KEY: secret.WATCHPAY_PAYMENT_KEY,
   WATCHPAY_URL: secret.WATCHPAY_URL,
   WATCHPAY_PAYOUT_KEY: secret.WATCHPAY_PAYOUT_KEY,
+  idfyaccountid: secret.idfyaccountid,
+  idfyapikey: secret.idfyapikey
 };
 // return credentials;
 // };

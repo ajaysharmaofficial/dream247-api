@@ -6,7 +6,8 @@ const configModel = require("../../../models/configModel");
 const TransactionModel = require("../../../models/walletTransactionModel");
 const moment = require('moment');
 const GetBonus = require("../../../utils/getBonus.js");
-const sendboxapi = require("../../../utils/sendboxapi.js");
+// const sendboxapi = require("../../../utils/sendboxapi.js");
+const verificationapi = require("../../../utils/verificationapi.js");
 const NotificationModel = require("../../../models/alertModel");
 const referralRewardModel = require("../../../models/referralRewardModel.js");
 const IndianStateModel = require("../../../models/IndianStateModel.js");
@@ -193,7 +194,7 @@ exports.adharCardSentOtp = async (req) => {
     // console.log("updatedUser", updatedUser);
 
     // Send OTP
-    let response = await sendboxapi.aadhaarSendOtp(req);
+    let response = await verificationapi.aadhaarSendOtp(req);
 
     if (response.status === "SUCCESS") {
       return response;
@@ -221,7 +222,7 @@ exports.adharcardVeifyOtp = async (req) => {
       user = await userModel.findOne({ id: req.user._id });
     }
 
-    const data = await sendboxapi.aadhaarSendOtpVerify(req);
+    const data = await verificationapi.aadhaarSendOtpVerify(req);
     // console.log("dataaaaaaaaaaaaaaadhaaaaaaaarrrrrr", data);
     if (data.status !== "VALID") {
       console.log("Aadhaar verification failed:", data.message);
@@ -596,41 +597,41 @@ exports.panVerfication = async (req) => {
       };
     }
 
-    let allStates = await redisMain.getkeydata("getStates");
+    // let allStates = await redisMain.getkeydata("getStates");
 
-    if (!allStates) {
-      // If not found in Redis, fetch from MongoDB
-      const states = await IndianStateModel.find().select("name status");
+    // if (!allStates) {
+    //   // If not found in Redis, fetch from MongoDB
+    //   const states = await IndianStateModel.find().select("name status");
 
-      if (states.length > 0) {
-        allStates = states.map(state => ({
-          name: state.name.toUpperCase(),
-          status: state.status
-        }));
+    //   if (states.length > 0) {
+    //     allStates = states.map(state => ({
+    //       name: state.name.toUpperCase(),
+    //       status: state.status
+    //     }));
 
-        // Store in Redis without expiry
-        await redisMain.setkeydata("getStates", JSON.stringify(allStates), 432000);
-      }
-    } else {
-      // Parse the Redis string into an array
-      allStates = JSON.parse(allStates);
-    }
+    //     // Store in Redis without expiry
+    //     await redisMain.setkeydata("getStates", JSON.stringify(allStates), 432000);
+    //   }
+    // } else {
+    //   // Parse the Redis string into an array
+    //   allStates = JSON.parse(allStates);
+    // }
 
-    // Extract banned state names
-    const bannedStateNames = allStates
-      .filter(state => !state.status) // Filter only banned states (status: false)
-      .map(state => state.name);
+    // // Extract banned state names
+    // const bannedStateNames = allStates
+    //   .filter(state => !state.status) // Filter only banned states (status: false)
+    //   .map(state => state.name);
 
-    // Retrieve user from Redis
-    let currentUser = await redisUser.getUser(req.user._id);
+    // // Retrieve user from Redis
+    // let currentUser = await redisUser.getUser(req.user._id);
 
-    if (bannedStateNames.includes(currentUser.state.toUpperCase())) {
-      return {
-        message: "You're from a Banned or Restricted State, that's why you can't Verify Further.",
-        status: false,
-        data: {},
-      };
-    }
+    // if (bannedStateNames.includes(currentUser.state.toUpperCase())) {
+    //   return {
+    //     message: "You're from a Banned or Restricted State, that's why you can't Verify Further.",
+    //     status: false,
+    //     data: {},
+    //   };
+    // }
 
     // Check if user is below 18
     const dobParts = currentUser.dob.split("-"); // Split 'DD-MM-YYYY'
@@ -717,7 +718,7 @@ exports.panVerfication = async (req) => {
       let responseapi;
       if (updatedUser) {
         req.body.name = updatedUser.aadharcard.aadhar_name;
-        responseapi = await sendboxapi.pancardVerify(req);
+        responseapi = await verificationapi.pancardVerify(req);
         // console.log("responseapi", responseapi);
       }
 
