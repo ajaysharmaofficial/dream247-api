@@ -41,9 +41,9 @@ async function getSandboxToken() {
 
 exports.aadhaarGenerateOtp = async (req, res) => {
   try {
-    const { aadhaar_number } = req.body;
+    const { aadharnumber } = req.body;
 
-    if (!aadhaar_number) {
+    if (!aadharnumber) {
       return {
         status: false,
         message: "Aadhaar number is required",
@@ -57,7 +57,7 @@ exports.aadhaarGenerateOtp = async (req, res) => {
       "https://api.sandbox.co.in/kyc/aadhaar/okyc/otp",
       {
         "@entity": "in.co.sandbox.kyc.aadhaar.okyc.otp.request",
-        aadhaar_number,
+        aadhaar_number: aadharnumber,
         consent: "Y",
         reason: "Aadhaar verification",
       },
@@ -88,12 +88,12 @@ exports.aadhaarGenerateOtp = async (req, res) => {
 
 exports.aadhaarVerifyOtp = async (req, res) => {
   try {
-    const { reference_id, otp } = req.body;
+    const { ref_id, otp } = req.body;
 
-    if (!reference_id || !otp) {
+    if (!ref_id || !otp) {
       return {
         status: false,
-        message: "reference_id and otp are required",
+        message: "ref_id and otp are required",
         data: {},
       };
     }
@@ -104,7 +104,7 @@ exports.aadhaarVerifyOtp = async (req, res) => {
       "https://api.sandbox.co.in/kyc/aadhaar/okyc/otp/verify",
       {
         "@entity": "in.co.sandbox.kyc.aadhaar.okyc.request",
-        reference_id,
+        reference_id: ref_id,
         otp,
       },
       {

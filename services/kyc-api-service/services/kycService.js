@@ -194,7 +194,7 @@ exports.adharCardSentOtp = async (req) => {
     // console.log("updatedUser", updatedUser);
 
     // Send OTP
-    let response = await verificationapi.aadhaarSendOtp(req);
+    let response = await verificationapi.aadhaarGenerateOtp(req);
 
     if (response.status === "SUCCESS") {
       return response;
@@ -222,7 +222,7 @@ exports.adharcardVeifyOtp = async (req) => {
       user = await userModel.findOne({ id: req.user._id });
     }
 
-    const data = await verificationapi.aadhaarSendOtpVerify(req);
+    const data = await verificationapi.aadhaarVerifyOtp(req);
     // console.log("dataaaaaaaaaaaaaaadhaaaaaaaarrrrrr", data);
     if (data.status !== "VALID") {
       console.log("Aadhaar verification failed:", data.message);
@@ -623,7 +623,14 @@ exports.panVerfication = async (req) => {
     //   .map(state => state.name);
 
     // // Retrieve user from Redis
-    // let currentUser = await redisUser.getUser(req.user._id);
+    let currentUser = await redisUser.getUser(req.user._id);
+
+    if (!currentUser) {
+      currentUser = await userModel.findById(req.user._id);
+    } else {
+      // Convert plain object to Mongoose document without inserting
+      currentUser = userModel.hydrate(currentUser);
+    }
 
     // if (bannedStateNames.includes(currentUser.state.toUpperCase())) {
     //   return {
@@ -718,6 +725,7 @@ exports.panVerfication = async (req) => {
       let responseapi;
       if (updatedUser) {
         req.body.name = updatedUser.aadharcard.aadhar_name;
+        req.body.dob = updatedUser.dob;
         responseapi = await verificationapi.pancardVerify(req);
         // console.log("responseapi", responseapi);
       }
