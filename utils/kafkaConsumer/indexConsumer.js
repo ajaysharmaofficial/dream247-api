@@ -25,9 +25,9 @@ async function startAllConsumers() {
     // await processSelfTransfer()
 
     // kyc consumer
-    // await processEmailVerification()
-    // await processAadharVerification()
-    // await processPanVerification()
+    await processEmailVerification()
+    await processAadharVerification()
+    await processPanVerification()
     await processBankVerification()
 
     // create team consumer
