@@ -52,6 +52,28 @@ let depositSchema = new Schema({
     bonus_txn: {
         type: String,
         default: ''
+    },
+    gems_txn: {
+        type: String,
+        default: ''
+    },
+    tierAmount: {
+        type: Number,
+        default: 0
+    },
+    mystery_txn: {
+        type: String,
+        default: ''
+    },
+
+    mystery_amount: {
+        type: Number,
+        default: 0
+    },
+    mystery_status: {
+        type: String,
+        enum: ['pending', 'claimed', 'expired'],
+        default: 'pending'
     }
 }, {
     timestamps: true,

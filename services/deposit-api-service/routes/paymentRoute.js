@@ -16,6 +16,7 @@ router.post("/add-cash-new-request", auth, paymentController.AddCashNewRequestKa
 
 router.post("/sabPaisa-callback", auth, paymentController.sabPaisaCallback);
 router.post("/sabPaisa-callback-web", auth, paymentController.sabPaisaCallbackWeb);
+router.post("/spinandwin", auth, paymentController.spinAndWin);
 router.post("/razorPay-callback", paymentController.razorPayCallback);
 router.post("/yesbank-callback", paymentController.yesBankCallback);
 router.post("/phonepay-callback/:merchantId", paymentController.phonePayCallback);

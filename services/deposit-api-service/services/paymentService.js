@@ -486,7 +486,7 @@ exports.newRequestAddCash = async (req) => {
           mobile: '9999999999',
           callbackUrl: '',
         }, {
-          'Client-id': 'U1BSX05YVF91YXRfOTc3YThmYmJiY2VmNjU4Nw=='
+          'Client-id': '=='
         })
           .then(({ data }) => console.log("dataaaaaaaaaaaaa", data))
           .catch(err => console.error(err));
@@ -2364,9 +2364,9 @@ exports.razorPayCallback = async (req) => {
 
     let paymentDataRedis = await redisPayment.getTDSdata(paymentData.userid);
 
-    if (appSettingData?.gst == 1) {
-      gstAmount = ((21.88 / 100) * addAmount).toFixed(2);
-    }
+    // if (appSettingData?.gst == 1) {
+    //   gstAmount = ((21.88 / 100) * addAmount).toFixed(2);
+    // }
 
     const amountWithGst = addAmount - gstAmount;
     const userWalletKey = `wallet:{${paymentData.userid}}`;
@@ -2376,6 +2376,12 @@ exports.razorPayCallback = async (req) => {
       await redisUser.setDbtoRedisWallet(paymentData.userid);
       userBalance = await redisUser.redis.hgetall(userWalletKey);
     }
+    const tiers = await tierbreakdown
+      .findOne({
+        minAmount: { $lte: addAmount },
+        maxAmount: { $gte: addAmount }
+      })
+      .lean();
 
     const transactionObj = {
       txnid: txnid,
@@ -2388,6 +2394,7 @@ exports.razorPayCallback = async (req) => {
       paymentmethod: paymentData.paymentmethod,
       utr: paymentEntity.acquirer_data?.utr || "",
       gst_amount: gstAmount,
+      tierAmount: tiers?.tokenAmount || 0,
     };
 
     await redisUser.saveTransactionToRedis(paymentData.userid, {
@@ -2401,6 +2408,7 @@ exports.razorPayCallback = async (req) => {
       expiresAt = new Date(Date.now() + 2 * 60 * 1000);
     }
 
+
     const gstTxnId = `CASHBACK-GST-${Date.now()}-${randomStr}`;
     const bonusObj = {
       txnid: gstTxnId,
@@ -2412,16 +2420,34 @@ exports.razorPayCallback = async (req) => {
       expiresAt: moment(expiresAt).format("YYYY-MM-DD HH:mm:ss"),
     };
 
+    if (!tiers) {
+      throw new Error("No tier found for this amount");
+    }
+
+    const gemsTxnId = `CASHBACK-GEMS-${Date.now()}-${randomStr}`;
+
+    const bonusObj1 = {
+      txnid: gemsTxnId,
+      transaction_id: gemsTxnId,
+      type: "Bonus",
+      transaction_type: "Credit",
+      userid: paymentData.userid,
+      amount: tiers.tokenAmount,
+      expiresAt: moment(expiresAt).format("YYYY-MM-DD HH:mm:ss"),
+    };
+
+
     await redisUser.saveTransactionToRedis(paymentData.userid, {
-      bonus: Number(userBalance.bonus || 0) + Number(gstAmount),
-    }, bonusObj);
+      bonus: Number(userBalance.bonus || 0) + Number(tiers.tokenAmount),
+    }, bonusObj1);
 
     console.log("amountWithGst", amountWithGst);
     console.log("gstAmount", gstAmount);
+    console.log("tiers.tokenAmount", tiers.tokenAmount);
 
     const updatedUser = await userModel.findOneAndUpdate(
       { _id: paymentData.userid },
-      { $inc: { "userbalance.balance": amountWithGst, "userbalance.bonus": Number(gstAmount) } },
+      { $inc: { "userbalance.balance": amountWithGst, "userbalance.bonus": Number(gstAmount) + Number(tiers.tokenAmount) } },
       { new: true }
     );
 
@@ -2446,6 +2472,8 @@ exports.razorPayCallback = async (req) => {
       }
     }
 
+    await this.addAmountTransaction(updatedUser, tiers.tokenAmount, "Gems Bonus", "bonus", gemsTxnId);
+
     let processedPayment = await depositModel.findOneAndUpdate(
       { orderid: txnid },
       {
@@ -2454,6 +2482,8 @@ exports.razorPayCallback = async (req) => {
         utr: paymentEntity.acquirer_data?.utr || "",
         gst_amount: gstAmount,
         bonus_txn: gstTxnId,
+        gems_txn: gemsTxnId,
+        tierAmount: tiers?.tokenAmount || 0,
       },
       { new: true }
     );
@@ -2523,6 +2553,73 @@ exports.razorPayCallback = async (req) => {
   } catch (error) {
     console.error("Webhook error:", error);
     return { status: false, message: "Webhook processing failed", error };
+  }
+};
+
+exports.spinAndWin = async (req) => {
+  try {
+    const { deposit_id } = req.body;
+    const userId = req.user._id;
+
+    const deposit = await depositModel.findOne({
+      _id: deposit_id,
+      userid: userId
+    });
+
+    if (!deposit) {
+      return { status: false, message: "Deposit not found" };
+    }
+
+    if (deposit.mystery_status !== 'pending') {
+      return { status: false, message: "Spin already used or expired" };
+    }
+
+    if (deposit.mystery_amount <= 0) {
+      return { status: false, message: "No spin gems available" };
+    }
+
+    const minWin = Math.ceil(deposit.mystery_amount * 0.2);
+    const maxWin = deposit.mystery_amount;
+
+    const winAmount =
+      Math.floor(Math.random() * (maxWin - minWin + 1)) + minWin;
+
+    await userModel.updateOne(
+      { _id: userId },
+      { $inc: { 'userbalance.bonus': winAmount } }
+    );
+
+    const spinTxnId = `SPIN-${Date.now()}`;
+
+    await this.addAmountTransaction(
+      { _id: userId },
+      winAmount,
+      "Spin & Win Bonus",
+      "bonus",
+      spinTxnId
+    );
+
+    await depositModel.updateOne(
+      { _id: deposit_id },
+      {
+        mystery_status: 'claimed',
+        mystery_win_amount: winAmount,
+        mystery_claimed_at: new Date()
+      }
+    );
+
+    return {
+      status: true,
+      message: "Spin successful",
+      data: {
+        winAmount,
+        maxPossible: deposit.mystery_amount
+      }
+    };
+
+  } catch (error) {
+    console.error("Spin error:", error);
+    return { status: false, message: "Spin failed" };
   }
 };
 
