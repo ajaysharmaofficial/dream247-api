@@ -433,7 +433,9 @@ const credentials = {
   WATCHPAY_URL: secret.WATCHPAY_URL,
   WATCHPAY_PAYOUT_KEY: secret.WATCHPAY_PAYOUT_KEY,
   idfyaccountid: secret.idfyaccountid,
-  idfyapikey: secret.idfyapikey
+  idfyapikey: secret.idfyapikey,
+  sanboxclientid: secret.sanboxclientid,
+  sanboxclientsecret: secret.sanboxclientsecret
 };
 // return credentials;
 // };
