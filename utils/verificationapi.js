@@ -9,6 +9,7 @@ const SANDBOX_TOKEN_TTL = 55 * 60; // 55 minutes
 async function getSandboxToken() {
   try {
     const cachedToken = await redisMain.getkeydata(SANDBOX_TOKEN_KEY);
+    console.log("cachedToken",cachedToken);
     if (cachedToken) {
       return cachedToken;
     }
