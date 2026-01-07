@@ -673,8 +673,8 @@ exports.AddCashNewRequestKafka = async (req, res) => {
     // Handle Razorpay
     if (paymentmethod === "RazorPay") {
       var instance = new Razorpay({
-        key_id: global.constant.RAZORPAY_KEY_ID_LIVE,
-        key_secret: global.constant.RAZORPAY_KEY_SECRET_LIVE,
+        key_id: global.constant.RAZORPAY_KEY_ID_TEST,
+        key_secret: global.constant.RAZORPAY_KEY_SECRET_TEST,
       });
 
       var options = {
