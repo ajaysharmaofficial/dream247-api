@@ -25,10 +25,10 @@ async function getSandboxToken() {
       }
     );
     console.log(response.data);
-    const token = response.data.token;
+    const token = response.data.access_token;
 
-    await redisMain.setkeydata(SANDBOX_TOKEN_KEY, token, SANDBOX_TOKEN_TTL);
-
+    let result = await redisMain.setkeydata(SANDBOX_TOKEN_KEY, token, SANDBOX_TOKEN_TTL);
+    console.log("result",result);
     return token;
   } catch (error) {
     console.error(
