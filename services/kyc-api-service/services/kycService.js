@@ -830,10 +830,10 @@ exports.bankVerificationReq = async (req) => {
     const response = await verificationapi.bankRequest(req.body);
     bankRes = response.data.data;
 
-    if (bankRes.account_exists == false) {
+    if (bankRes?.account_exists == false) {
       return {
         status: false,
-        message: bankRes.reason || "PAN verification failed",
+        message: bankRes.reason || "Bank verification failed",
         data: bankRes
       };
     }
