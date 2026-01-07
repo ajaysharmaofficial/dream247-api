@@ -841,20 +841,20 @@ exports.bankVerificationReq = async (req) => {
 
       const bankData = {
         accountholder: accountholder.toUpperCase(),
-        accno,
-        confirm_accno,
+        accno: String(accno),
         ifsc: ifsc.toUpperCase(),
         bankname: bankName,
-        bankbranch: bankName,
+        bankbranch: bankName, // agar branch alag hai to change
         city,
         state,
         type,
         comment: comment || "",
         status: 1,
-        created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
-        updated_at: moment().format("YYYY-MM-DD HH:mm:ss"),
+        created_at: new Date(),
+        updated_at: new Date()
       };
 
+      console.log("bankData", bankData);
       await sendToQueue("bank-verification-topic", {
         userId: req.user._id,
         obj: { bank: bankData }
