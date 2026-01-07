@@ -9,9 +9,9 @@ const SANDBOX_TOKEN_TTL = 55 * 60; // 55 minutes
 async function getSandboxToken() {
   try {
     const cachedToken = await redisMain.getkeydata(SANDBOX_TOKEN_KEY);
-    if (cachedToken) {
-      return cachedToken;
-    }
+    // if (cachedToken) {
+    //   return cachedToken;
+    // }
     const response = await axios.post(
       "https://api.sandbox.co.in/authenticate",
       {},
@@ -60,7 +60,7 @@ exports.aadhaarGenerateOtp = async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: token,
           "x-api-key": global.constant.sanboxclientid,
           "Content-Type": "application/json",
         },
@@ -105,7 +105,7 @@ exports.aadhaarVerifyOtp = async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: token,
           "x-api-key": global.constant.sanboxclientid,
           "Content-Type": "application/json",
         },
@@ -152,7 +152,7 @@ exports.pancardVerify = async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: token,
           "x-api-key": global.constant.sanboxclientid,
           "Content-Type": "application/json",
         },
