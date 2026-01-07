@@ -811,6 +811,14 @@ exports.bankVerificationReq = async (req) => {
       };
     }
 
+    const response = await verificationapi.bankRequest(req);
+
+    console.log("response", response);
+    return {
+      status: false,
+      message: "Internal Server Error.",
+      error: error.message
+    };
     // Retrieve user from Redis
     let currentUser = await redisUser.getUser(req.user._id);
 
