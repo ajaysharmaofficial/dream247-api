@@ -573,7 +573,8 @@ exports.panVerfication = async (req) => {
 
     /* ================= PAN VERIFY API ================= */
     req.body.name = user.aadharcard?.aadhar_name;
-    req.body.dob = user.dob;
+    req.body.dob = moment(user.dob, ["DD-MM-YYYY", "YYYY-MM-DD", "DD/MM/YYYY"])
+      .format("DD/MM/YYYY");
 
     if (!req.body.name || !req.body.dob) {
       return {
