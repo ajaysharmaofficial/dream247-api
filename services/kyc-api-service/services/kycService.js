@@ -596,11 +596,7 @@ exports.panVerfication = async (req) => {
 
     const panData = response.data.data;
 
-    console.log("panData", panData);
-    console.log("panData.status", panData.status);
-    console.log("panData.status == 'VALID'", panData.status == "VALID");
-
-    if (panData.status != "valid" || panData.status != "VALID") {
+    if (panData.status?.toLowerCase() !== "valid") {
       return {
         status: false,
         message: panData.reason || "PAN verification failed",
@@ -612,8 +608,8 @@ exports.panVerfication = async (req) => {
     const updatePayload = {
       user_verify: { pan_verify: 1 },
       pancard: {
-        pan_number: panData.pan_response.pan,
-        pan_name: panData.pan_response.registered_name,
+        pan_number: panData.pan,
+        pan_name: req.body.name,
         status: global.constant.PANCARD.APPROVED,
         created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
         updated_at: moment().format("YYYY-MM-DD HH:mm:ss"),
