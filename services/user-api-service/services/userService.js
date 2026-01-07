@@ -613,7 +613,7 @@ exports.addTempUser = async (req) => {
         : 123456;
 
     // if (reqMobile == "9462636977") {
-      otp = 123456;
+    otp = 123456;
     // }
 
     // if (process.env.secretManager === "prod") {
@@ -695,7 +695,7 @@ exports.loginUser = async (req, user) => {
         : 123456;
 
     // if (mobile == "9462636977") {
-      otp = 123456;
+    otp = 123456;
     // }
 
     // if (process.env.secretManager === "prod") {
@@ -1648,6 +1648,8 @@ exports.userOwnTransactions = async (req) => {
                 "Unfreeze Fund",
                 "Unfreeze Bonus",
                 "Unfreeze Winning",
+                "Spin & Win Bonus",
+                "Gems Bonus",
               ],
             },
             amount: { $ne: 0 },
@@ -2233,7 +2235,8 @@ exports.userOwnTransactions = async (req) => {
                   transaction_type: {
                     $cond: {
                       if: {
-                        $in: ["$type", ["Cash added", "P2P Deposit"]],
+                        $in: ["$type", ["Cash added", "P2P Deposit", "Spin & Win Bonus",
+                          "Gems Bonus",]],
                       },
                       then: "Credit",
                       else: "Debit",
