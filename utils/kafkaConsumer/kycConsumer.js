@@ -356,7 +356,7 @@ const processBankVerification = async () => {
                   const user = await userModel.findByIdAndUpdate(
                     { _id: userId },
                     {
-                      obj,
+                      ...obj,
                       "user_verify.bank_verify": 1,
                     },
                     { new: true }
