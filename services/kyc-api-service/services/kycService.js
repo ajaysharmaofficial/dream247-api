@@ -853,8 +853,6 @@ exports.bankVerificationReq = async (req) => {
         created_at: new Date(),
         updated_at: new Date()
       };
-
-      console.log("bankData", bankData);
       await sendToQueue("bank-verification-topic", {
         userId: req.user._id,
         obj: { bank: bankData }

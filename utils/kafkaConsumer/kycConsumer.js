@@ -352,7 +352,6 @@ const processBankVerification = async () => {
                     successfullyProcessedMessages.add(message.offset);
                     return;
                   }
-                  console.log("obj", obj);
                   const user = await userModel.findByIdAndUpdate(
                     { _id: userId },
                     {
