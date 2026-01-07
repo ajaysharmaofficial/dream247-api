@@ -2367,7 +2367,7 @@ exports.razorPayPaymentVerify = async (req) => {
       payment_id: razorpay_payment_id
     });
 
-    return { status: true, message: "Payment verified & bonus credited successfully" };
+    return { status: true, message: "Payment verified & Game token and Shopping token credited successfully" };
 
   } catch (error) {
     console.error(error);
@@ -2756,7 +2756,7 @@ exports.spinAndWin = async (req) => {
     const winAmount =
       Math.floor(Math.random() * (maxWin - minWin + 1)) + minWin;
 
-    await userModel.updateOne(
+    const updatedBalance = await userModel.findOneAndUpdate(
       { _id: userId },
       { $inc: { 'userbalance.bonus': winAmount } }
     );
@@ -2764,7 +2764,7 @@ exports.spinAndWin = async (req) => {
     const spinTxnId = `SPIN-${Date.now()}`;
 
     await this.addAmountTransaction(
-      { _id: userId },
+      updatedBalance,
       winAmount,
       "Spin & Win Bonus",
       "bonus",
