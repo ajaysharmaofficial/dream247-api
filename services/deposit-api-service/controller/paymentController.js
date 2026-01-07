@@ -208,6 +208,32 @@ exports.razorPayCallback = async (req, res, next) => {
     }
 };
 
+exports.razorPayPaymentVerify = async (req, res, next) => {
+    try {
+        const data = await paymentServices.razorPayPaymentVerify(req);
+
+        if (data && data.status) {
+            return res.status(200).json({
+                success: true,
+                message: data.message,
+                data: data.data,
+            });
+        } else {
+            return res.status(200).json({
+                success: false,
+                message: data.message,
+            });
+        }
+    } catch (error) {
+        console.error("Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "An unexpected error occurred. Please try again later.",
+        });
+    }
+};
+
 exports.spinAndWin = async (req, res, next) => {
     try {
         const data = await paymentServices.spinAndWin(req);
