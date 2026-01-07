@@ -828,14 +828,13 @@ exports.bankVerificationReq = async (req) => {
 
     /* ================= SANDBOX BANK VERIFY ================= */
     const response = await verificationapi.bankRequest(req.body);
-    console.log("bankRes", bankRes);
     bankRes = response.data.data;
 
     if (bankRes.account_exists == false) {
       return {
         status: false,
-        message: panData.reason || "PAN verification failed",
-        data: panData
+        message: bankRes.reason || "PAN verification failed",
+        data: bankRes
       };
     }
 
