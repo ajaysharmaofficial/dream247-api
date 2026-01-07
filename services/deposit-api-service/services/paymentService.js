@@ -2330,31 +2330,22 @@ function decryptResponse(encryptedText, secretKey, iv) {
 
 exports.razorPayPaymentVerify = async (req) => {
   try {
-    console.log("🔐 Razorpay Verify Body:", req.body);
-
     const {
       razorpay_payment_id,
       razorpay_order_id,
       razorpay_signature
     } = req.body;
 
-    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
-      return { status: false, message: "Invalid payment data" };
-    }
-
-    /* ================= VERIFY SIGNATURE ================= */
     const body = razorpay_order_id + "|" + razorpay_payment_id;
-
     const expectedSignature = crypto
-      .createHmac("sha256", global.constant.RAZORPAY_KEY_SECRET_TEST)
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(body)
       .digest("hex");
 
     if (expectedSignature !== razorpay_signature) {
-      return { status: false, message: "Payment signature verification failed" };
+      return { status: false, message: "Signature verification failed" };
     }
 
-    /* ================= FIND PENDING TRANSACTION ================= */
     const paymentData = await depositModel.findOne({
       orderid: razorpay_order_id,
       status: global.constant.PAYMENT_STATUS_TYPES.PENDING
@@ -2364,7 +2355,6 @@ exports.razorPayPaymentVerify = async (req) => {
       return { status: false, message: "Transaction not found or already processed" };
     }
 
-    /* ================= LOG ================= */
     await razorpayLogsModel.create({
       userid: paymentData.userid,
       txnid: paymentData.txnid,
@@ -2373,87 +2363,145 @@ exports.razorPayPaymentVerify = async (req) => {
       data: req.body
     });
 
-    /* ================= WALLET CALCULATION ================= */
-    const addAmount = Number(paymentData.amount);
-    let gstAmount = 0;
-    const amountWithGst = addAmount - gstAmount;
+    await processSuccessfulDeposit.call(this, paymentData, {
+      payment_id: razorpay_payment_id
+    });
 
-    const userWalletKey = `wallet:{${paymentData.userid}}`;
-    let userBalance = await redisUser.redis.hgetall(userWalletKey);
-
-    if (!userBalance || !userBalance.balance) {
-      await redisUser.setDbtoRedisWallet(paymentData.userid);
-      userBalance = await redisUser.redis.hgetall(userWalletKey);
-    }
-
-    const tiers = await tierbreakdown.findOne({
-      minAmount: { $lte: addAmount },
-      maxAmount: { $gte: addAmount }
-    }).lean();
-
-    if (!tiers) throw new Error("No tier found for this amount");
-
-    /* ================= REDIS TRANSACTION ================= */
-    await redisUser.saveTransactionToRedis(
-      paymentData.userid,
-      {
-        balance: Number(userBalance.balance || 0) + amountWithGst
-      },
-      {
-        txnid: razorpay_order_id,
-        transaction_id: razorpay_order_id,
-        type: "Cash added",
-        transaction_type: "Credit",
-        amount: amountWithGst,
-        userid: paymentData.userid,
-        paymentstatus: "success",
-        paymentmethod: paymentData.paymentmethod,
-        utr: razorpay_payment_id,
-        tierAmount: tiers.tokenAmount || 0
-      }
-    );
-
-    /* ================= DB UPDATE ================= */
-    const updatedUser = await userModel.findOneAndUpdate(
-      { _id: paymentData.userid },
-      {
-        $inc: {
-          "userbalance.balance": amountWithGst,
-          "userbalance.bonus": Number(tiers.tokenAmount || 0)
-        }
-      },
-      { new: true }
-    );
-
-    await depositModel.findOneAndUpdate(
-      { orderid: razorpay_order_id },
-      {
-        status: "SUCCESS",
-        pay_id: razorpay_payment_id,
-        tierAmount: tiers.tokenAmount || 0
-      },
-      { new: true }
-    );
-
-    await this.addAmountTransaction(
-      updatedUser,
-      amountWithGst,
-      "Cash added",
-      "fund",
-      razorpay_order_id
-    );
-
-    return { status: true, message: "Payment verified successfully" };
+    return { status: true, message: "Payment verified & bonus credited successfully" };
 
   } catch (error) {
-    console.error("❌ Razorpay Verify Error:", error);
-    return {
-      status: false,
-      message: "Payment verification failed",
-      error: error.message
-    };
+    console.error(error);
+    return { status: false, message: "Payment verification failed", error: error.message };
   }
 };
+
+
+async function processSuccessfulDeposit(paymentData, razorpayData) {
+
+  const addAmount = paymentData.amount;
+  let gstAmount = 0;
+
+  const amountWithGst = addAmount - gstAmount;
+
+  const userWalletKey = `wallet:{${paymentData.userid}}`;
+  let userBalance = await redisUser.redis.hgetall(userWalletKey);
+
+  if (!userBalance || !userBalance.balance) {
+    await redisUser.setDbtoRedisWallet(paymentData.userid);
+    userBalance = await redisUser.redis.hgetall(userWalletKey);
+  }
+
+  const tiers = await tierbreakdown.findOne({
+    minAmount: { $lte: addAmount },
+    maxAmount: { $gte: addAmount }
+  }).lean();
+
+  if (!tiers) throw new Error("No tier found");
+
+  /* ================= CASH CREDIT ================= */
+  await redisUser.saveTransactionToRedis(
+    paymentData.userid,
+    { balance: Number(userBalance.balance || 0) + amountWithGst },
+    {
+      txnid: paymentData.txnid,
+      transaction_id: paymentData.txnid,
+      type: "Cash added",
+      transaction_type: "Credit",
+      amount: amountWithGst,
+      userid: paymentData.userid,
+      paymentstatus: "success",
+      paymentmethod: paymentData.paymentmethod,
+      utr: razorpayData.utr || razorpayData.payment_id,
+      gst_amount: gstAmount,
+      tierAmount: tiers.tokenAmount
+    }
+  );
+
+  /* ================= BONUS / GEMS ================= */
+  const randomStr = randomstring.generate({ length: 8, charset: "alphabetic", capitalization: "uppercase" });
+  let expiresAt = new Date(Date.now() + 28 * 24 * 60 * 60 * 1000);
+
+  const gemsTxnId = `CASHBACK-GEMS-${Date.now()}-${randomStr}`;
+
+  await redisUser.saveTransactionToRedis(
+    paymentData.userid,
+    { bonus: Number(userBalance.bonus || 0) + Number(tiers.tokenAmount) },
+    {
+      txnid: gemsTxnId,
+      transaction_id: gemsTxnId,
+      type: "Bonus",
+      transaction_type: "Credit",
+      userid: paymentData.userid,
+      amount: tiers.tokenAmount,
+      expiresAt: moment(expiresAt).format("YYYY-MM-DD HH:mm:ss"),
+    }
+  );
+
+  /* ================= DB UPDATE ================= */
+  const updatedUser = await userModel.findOneAndUpdate(
+    { _id: paymentData.userid },
+    {
+      $inc: {
+        "userbalance.balance": amountWithGst,
+        "userbalance.bonus": tiers.tokenAmount
+      }
+    },
+    { new: true }
+  );
+
+  /* ================= DEPOSIT UPDATE ================= */
+  await depositModel.findOneAndUpdate(
+    { _id: paymentData._id },
+    {
+      status: "SUCCESS",
+      pay_id: razorpayData.payment_id,
+      utr: razorpayData.utr || "",
+      tierAmount: tiers.tokenAmount,
+      gems_txn: gemsTxnId
+    }
+  );
+
+  await this.addAmountTransaction(updatedUser, amountWithGst, "Cash added", "fund", paymentData.txnid);
+  await this.addAmountTransaction(updatedUser, tiers.tokenAmount, "Gems Bonus", "bonus", gemsTxnId);
+
+  /* ================= OFFER BONUS ================= */
+  if (paymentData.offerid) {
+    const offer = await specialOfferModel.findById(paymentData.offerid);
+    if (offer) {
+      const alreadyUsed = await appliedOfferModel.countDocuments({
+        user_id: paymentData.userid,
+        offer_id: paymentData.offerid,
+      });
+
+      if (alreadyUsed < offer.user_time) {
+        const bonusAmount = offer.offer_type === "flat"
+          ? offer.bonus
+          : (paymentData.amount * (offer.bonus / 100));
+
+        const transaction_id_offer = `${global.constant.APP_SHORT_NAME}-OFFER-${Date.now()}`;
+
+        await redisUser.saveTransactionToRedis(
+          paymentData.userid,
+          { bonus: Number(userBalance.bonus || 0) + Number(bonusAmount) },
+          {
+            txnid: transaction_id_offer,
+            transaction_id: transaction_id_offer,
+            type: "Offer bonus",
+            transaction_type: "Credit",
+            userid: paymentData.userid,
+            amount: bonusAmount
+          }
+        );
+
+        await appliedOfferModel.create({
+          user_id: paymentData.userid,
+          offer_id: paymentData.offerid,
+          transaction_id_offer
+        });
+      }
+    }
+  }
+}
 
 
 exports.razorPayCallback = async (req) => {
