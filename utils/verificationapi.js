@@ -198,8 +198,8 @@ exports.bankRequest = async (req) => {
       method: "post",
       url: "https://eve.idfy.com/v3/tasks/async/verify_with_source/validate_bank_account",
       headers: {
-        "api-key": global.constant.idfyaccountid,
-        "account-id": global.constant.idfyaccountsecret,
+        "api-key": global.constant.idfyapikey,
+        "account-id": global.constant.idfyaccountid,
         "Content-Type": "application/json",
       },
       data: payload,
