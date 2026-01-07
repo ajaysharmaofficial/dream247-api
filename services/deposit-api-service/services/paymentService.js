@@ -2737,47 +2737,81 @@ exports.spinAndWin = async (req) => {
     const { deposit_id } = req.body;
     const userId = req.user._id;
 
-    const deposit = await depositModel.findOne({
-      txnid: deposit_id,
-      userid: userId
-    });
+    /* ================= FIND & LOCK DEPOSIT ================= */
+    const deposit = await depositModel.findOneAndUpdate(
+      {
+        txnid: deposit_id,
+        userid: userId,
+        mystery_status: "pending"
+      },
+      {
+        mystery_status: "processing"
+      },
+      { new: true }
+    );
 
     if (!deposit) {
-      return { status: false, message: "Deposit not found" };
+      return {
+        status: false,
+        message: "Spin already used, expired or deposit not found"
+      };
     }
 
-    if (deposit.mystery_status !== 'pending') {
-      return { status: false, message: "Spin already used or expired" };
-    }
-
+    /* ================= CALCULATE WIN ================= */
     const minWin = Math.ceil(deposit.mystery_amount * 0.2);
     const maxWin = deposit.mystery_amount;
 
     const winAmount =
       Math.floor(Math.random() * (maxWin - minWin + 1)) + minWin;
 
-    const updatedBalance = await userModel.findOneAndUpdate(
+    /* ================= UPDATE USER BALANCE ================= */
+    const updatedUser = await userModel.findOneAndUpdate(
       { _id: userId },
-      { $inc: { 'userbalance.bonus': winAmount } }
+      { $inc: { "userbalance.bonus": winAmount } },
+      { new: true } // ✅ IMPORTANT
     );
+
+    /* ================= REDIS WALLET UPDATE ================= */
+    const userWalletKey = `wallet:{${userId}}`;
+    let userBalance = await redisUser.redis.hgetall(userWalletKey);
+
+    if (!userBalance || !userBalance.bonus) {
+      await redisUser.setDbtoRedisWallet(userId);
+      userBalance = await redisUser.redis.hgetall(userWalletKey);
+    }
 
     const spinTxnId = `SPIN-${Date.now()}`;
 
+    await redisUser.saveTransactionToRedis(
+      userId,
+      { bonus: Number(userBalance.bonus || 0) + winAmount },
+      {
+        txnid: spinTxnId,
+        transaction_id: spinTxnId,
+        type: "Spin & Win Bonus",
+        transaction_type: "Credit",
+        userid: userId,
+        amount: winAmount
+      }
+    );
+
+    /* ================= FINALIZE DEPOSIT ================= */
+    await depositModel.updateOne(
+      { _id: deposit._id },
+      {
+        mystery_status: "claimed",
+        mystery_win_amount: winAmount,
+        mystery_claimed_at: new Date()
+      }
+    );
+
+    /* ================= TRANSACTION LOG ================= */
     await this.addAmountTransaction(
-      updatedBalance,
+      updatedUser,
       winAmount,
       "Spin & Win Bonus",
       "bonus",
       spinTxnId
-    );
-
-    await depositModel.updateOne(
-      { txnid: deposit_id },
-      {
-        mystery_status: 'claimed',
-        mystery_win_amount: winAmount,
-        mystery_claimed_at: new Date()
-      }
     );
 
     return {
@@ -2791,7 +2825,11 @@ exports.spinAndWin = async (req) => {
 
   } catch (error) {
     console.error("Spin error:", error);
-    return { status: false, message: "Spin failed" };
+    return {
+      status: false,
+      message: "Spin failed",
+      error: error.message
+    };
   }
 };
 
