@@ -169,7 +169,8 @@ const processAadharVerification = async () => {
                     userId,
                     {
                       $set: {
-                        ...obj
+                        ...obj,
+                        "user_verify.aadhar_verify": 1
                       }
                     },
                     { new: true }
@@ -258,7 +259,12 @@ const processPanVerification = async () => {
 
                   const user = await userModel.findByIdAndUpdate(
                     { _id: userId },
-                    obj,
+                    {
+                      $set: {
+                        ...obj,
+                        "user_verify.pan_verify": 1
+                      }
+                    },
                     { new: true }
                   );
 

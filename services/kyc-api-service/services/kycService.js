@@ -200,9 +200,6 @@ exports.adharcardVeifyOtp = async (req) => {
     const gender = data.gender === "M" ? "Male" : "Female";
 
     const update = {
-      user_verify: {
-        aadhar_verify: 1
-      },
       aadharcard: {
         state: data.address.state,
         aadhar_number: req.body.aadharnumber,
@@ -606,7 +603,6 @@ exports.panVerfication = async (req) => {
 
     /* ================= SUCCESS ================= */
     const updatePayload = {
-      user_verify: { pan_verify: 1 },
       pancard: {
         pan_number: panData.pan,
         pan_name: req.body.name,
