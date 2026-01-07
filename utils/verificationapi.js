@@ -9,7 +9,6 @@ const SANDBOX_TOKEN_TTL = 55 * 60; // 55 minutes
 async function getSandboxToken() {
   try {
     const cachedToken = await redisMain.getkeydata(SANDBOX_TOKEN_KEY);
-    console.log("cachedToken",cachedToken);
     if (cachedToken) {
       return cachedToken;
     }
@@ -24,11 +23,9 @@ async function getSandboxToken() {
         },
       }
     );
-    console.log(response.data);
     const token = response.data.access_token;
 
-    let result = await redisMain.setkeydata(SANDBOX_TOKEN_KEY, token, SANDBOX_TOKEN_TTL);
-    console.log("result",result);
+    await redisMain.setkeydata(SANDBOX_TOKEN_KEY, token, SANDBOX_TOKEN_TTL);
     return token;
   } catch (error) {
     console.error(
@@ -53,7 +50,7 @@ exports.aadhaarGenerateOtp = async (req, res) => {
     }
 
     const token = await getSandboxToken();
-
+    console.log(token);
     const response = await axios.post(
       "https://api.sandbox.co.in/kyc/aadhaar/okyc/otp",
       {
@@ -70,7 +67,7 @@ exports.aadhaarGenerateOtp = async (req, res) => {
         },
       }
     );
-    console.log(response.data);
+    console.log(response);
     return {
       status: true,
       message: "Aadhaar OTP sent successfully",
