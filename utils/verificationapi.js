@@ -23,7 +23,7 @@ async function getSandboxToken() {
         },
       }
     );
-
+    console.log(response.data);
     const token = response.data.token;
 
     await redisMain.setkeydata(SANDBOX_TOKEN_KEY, token, SANDBOX_TOKEN_TTL);
