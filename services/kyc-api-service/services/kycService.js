@@ -830,50 +830,50 @@ exports.bankVerificationReq = async (req) => {
     const response = await verificationapi.bankRequest(req.body);
     bankRes = response.data.data;
 
-    if (bankRes?.account_exists == false) {
+    if (bankRes.account_exists == true) {
+      /* ================= USER LOAD ================= */
+      let currentUser = await redisUser.getUser(req.user._id);
+
+      if (!currentUser) {
+        currentUser = await userModel.findById(req.user._id);
+      } else {
+        currentUser = userModel.hydrate(currentUser);
+      }
+
+      const bankData = {
+        accountholder: accountholder.toUpperCase(),
+        accno,
+        confirm_accno,
+        ifsc: ifsc.toUpperCase(),
+        bankname: bankName,
+        bankbranch: bankName,
+        city,
+        state,
+        type,
+        comment: comment || "",
+        status: global.constant.BANK.APPROVED,
+        created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
+        updated_at: moment().format("YYYY-MM-DD HH:mm:ss"),
+      };
+
+      await sendToQueue("bank-verification-topic", {
+        userId: req.user._id,
+        obj: { bank: bankData }
+      });
+
+      return {
+        status: true,
+        message: "Bank verification request submitted successfully",
+        data: { userid: req.user._id }
+      };
+
+    } else {
       return {
         status: false,
         message: bankRes.reason || "Bank verification failed",
         data: bankRes
       };
     }
-
-    /* ================= USER LOAD ================= */
-    let currentUser = await redisUser.getUser(req.user._id);
-
-    if (!currentUser) {
-      currentUser = await userModel.findById(req.user._id);
-    } else {
-      currentUser = userModel.hydrate(currentUser);
-    }
-
-    const bankData = {
-      accountholder: accountholder.toUpperCase(),
-      accno,
-      confirm_accno,
-      ifsc: ifsc.toUpperCase(),
-      bankname: bankName,
-      bankbranch: bankName,
-      city,
-      state,
-      type,
-      comment: comment || "",
-      status: global.constant.BANK.APPROVED,
-      created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
-      updated_at: moment().format("YYYY-MM-DD HH:mm:ss"),
-    };
-
-    await sendToQueue("bank-verification-topic", {
-      userId: req.user._id,
-      obj: { bank: bankData }
-    });
-
-    return {
-      status: true,
-      message: "Bank verification request submitted successfully",
-      data: { userid: req.user._id }
-    };
-
   } catch (error) {
     console.error("bankVerificationReq Error:", error);
     return {
