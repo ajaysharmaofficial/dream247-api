@@ -182,8 +182,6 @@ exports.bankRequest = async ({ accno, ifsc }) => {
         message: "Bank account number and IFSC are required",
       };
     }
-    console.log("accno", accno);
-    console.log("ifsc", ifsc);
     const token = await getSandboxToken();
 
     const response = await axios.get(
