@@ -221,7 +221,7 @@ exports.adharcardVeifyOtp = async (req) => {
     };
 
     const queuePayload = {
-      dob: data.dob,
+      dob: data.date_of_birth,
       address: data.address,
       city: data.address.district,
       gender,
