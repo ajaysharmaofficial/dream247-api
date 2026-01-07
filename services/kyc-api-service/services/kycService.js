@@ -585,9 +585,8 @@ exports.panVerfication = async (req) => {
     }
 
     const response = await verificationapi.pancardVerify(req);
-    console.log("response", response);
     // ❌ API failed
-    if (response.status !== true) {
+    if (response.status != true) {
       return {
         status: false,
         message: response.message || "PAN verification failed",
@@ -595,10 +594,9 @@ exports.panVerfication = async (req) => {
       };
     }
 
-    const panData = response.data;
+    const panData = response.data.data;
 
-    // ❌ PAN invalid
-    if (panData.status !== "VALID") {
+    if (panData.status != "valid" || panData.status != "VALID") {
       return {
         status: false,
         message: panData.reason || "PAN verification failed",
