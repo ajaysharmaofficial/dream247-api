@@ -181,7 +181,8 @@ exports.adharcardVeifyOtp = async (req) => {
     }
 
     const response = await verificationapi.aadhaarVerifyOtp(req);
-    console.log("dataaaaaaaaaaaaaaadhaaaaaaaarrrrrr", response);
+    console.log("dataaaaaaaaaaaaaaadhaaaaaaaarrrrrr", response.status);
+    console.log("response.status != true",response.status != true);
     if (response.status != true) {
       console.log("Aadhaar verification failed:", response.message);
       return {
