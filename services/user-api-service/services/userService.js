@@ -2182,7 +2182,7 @@ exports.userOwnTransactions = async (req) => {
         },
         {
           $lookup: {
-            from: "depositcashback",
+            from: "deposits",
             localField: "_id",
             foreignField: "userid",
             pipeline: [
