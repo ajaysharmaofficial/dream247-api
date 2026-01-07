@@ -188,7 +188,7 @@ exports.adharcardVeifyOtp = async (req) => {
       };
     }
 
-    const data = response.data;
+    const data = response.data.data;
     console.log("dataaaaaaaaaaaaaaadhaaaaaaaarrrrrr", data);
     if (data.status != "VALID") {
       return {
