@@ -173,9 +173,8 @@ exports.pancardVerify = async (req, res) => {
   }
 };
 
-exports.bankRequest = async (req) => {
+exports.bankRequest = async ({ accno, ifsc }) => {
   try {
-    const { accno, ifsc } = req.body;
 
     if (!accno || !ifsc) {
       return {

@@ -827,7 +827,10 @@ exports.bankVerificationReq = async (req) => {
     }
 
     /* ================= SANDBOX BANK VERIFY ================= */
-    const response = await verificationapi.bankRequest(req.body);
+    const response = await verificationapi.bankRequest({
+      accno: req.body.accno,
+      ifsc: req.body.ifsc
+    });
     bankRes = response.data.data;
 
     if (bankRes.account_exists == true) {
