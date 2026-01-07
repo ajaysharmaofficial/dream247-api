@@ -186,21 +186,13 @@ exports.bankRequest = async (req) => {
 
     const token = await getSandboxToken();
 
-    const response = await axios.post(
-      "https://api.sandbox.co.in/kyc/bank/verify",
-      {
-        "@entity": "in.co.sandbox.kyc.bank_verification.request",
-        bank_account_number: accno,
-        bank_ifsc_code: ifsc,
-        consent: "Y",
-        reason: "Bank account verification"
-      },
+    const response = await axios.get(
+      `https://api.sandbox.co.in/bank/${ifsc}/accounts/${accno}/penniless-verify`,
       {
         headers: {
           Authorization: token,
           "x-api-key": global.constant.sanboxclientid,
-          "Content-Type": "application/json",
-        },
+        }
       }
     );
 
