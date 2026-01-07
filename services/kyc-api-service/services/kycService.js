@@ -154,11 +154,11 @@ exports.adharCardSentOtp = async (req) => {
     // Send OTP
     let response = await verificationapi.aadhaarGenerateOtp(req);
 
-    if (response.status === "SUCCESS") {
+    if (response.status === true) {
       return response;
     } else {
       return {
-        message: `Attempt failed.`,
+        message: `Attempt failed. ${response.message}`,
         status: false,
         data: response.data || {},
       };
@@ -180,69 +180,69 @@ exports.adharcardVeifyOtp = async (req) => {
       user = await userModel.findOne({ id: req.user._id });
     }
 
-    const data = await verificationapi.aadhaarVerifyOtp(req);
+    const response = await verificationapi.aadhaarVerifyOtp(req);
     // console.log("dataaaaaaaaaaaaaaadhaaaaaaaarrrrrr", data);
-    if (data.status !== "VALID") {
-      console.log("Aadhaar verification failed:", data.message);
+    if (response.status !== true) {
+      console.log("Aadhaar verification failed:", response.message);
       return {
         status: false,
-        message: data.message || "Aadhaar verification failed."
+        message: response.message || "Aadhaar verification failed."
       };
     }
-    const update = {};
-    let gender = "Male";
-    if (data.gender != "M") {
-      gender = "Female";
+
+    const data = response.data;
+
+    if (data.status !== "VALID") {
+      return {
+        status: false,
+        message: "Aadhaar verification failed",
+        data
+      };
     }
-    update["$set"] = {
-      "user_verify.aadhar_verify":
-        global.constant.PROFILE_VERIFY_AADHAR_BANK.APPROVE,
+
+    const gender = data.gender === "M" ? "Male" : "Female";
+
+    const update = {
+      user_verify: {
+        aadhar_verify: global.constant.PROFILE_VERIFY_AADHAR_BANK.APPROVE
+      },
+      aadharcard: {
+        state: data.split_address.state,
+        aadhar_number: req.body.aadharnumber,
+        aadhar_dob: data.dob,
+        aadhar_name: data.name.toUpperCase(),
+        status: global.constant.AADHARCARD.APPROVED,
+        created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
+        updated_at: moment().format("YYYY-MM-DD HH:mm:ss"),
+        address: data.address,
+        city: data.split_address.dist,
+        gender,
+        pincode: data.split_address.pincode,
+        frontimage: data.photo_link
+      }
     };
 
-    update["aadharcard"] = {
-      state: data.split_address.state,
-      aadhar_number: req.body.aadharnumber,
-      aadhar_dob: data.dob,
-      aadhar_name: data.name.toUpperCase(),
-      status: global.constant.AADHARCARD.APPROVED,
-      created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
-      updated_at: moment().format("YYYY-MM-DD HH:mm:ss"),
-      address: data.address,
-      city: data.split_address.dist,
-      gender: gender,
-      pincode: data.split_address.pincode,
-      state: data.split_address.state,
-      frontimage: data.photo_link,
-    };
-
-    let data1 = {
+    const queuePayload = {
       dob: data.dob,
       address: data.address,
       city: data.split_address.dist,
-      gender: gender,
+      gender,
       pincode: data.split_address.pincode,
       state: data.split_address.state,
       username: data.name,
-      aadharcard: update["aadharcard"],
-      user_verify: update["user_verify"]
+      aadharcard: update.aadharcard,
+      user_verify: update.user_verify
     };
 
-    await sendToQueue("aadhar-verification-topic",
-      {
-        userId: req.user._id,
-        obj: data1
-      }
-    );
-
-    // await NotificationModel.create({
-    //   title: "Your aadhar card successfully verify.",
-    //   userid: req.user._id,
-    // });
+    await sendToQueue("aadhar-verification-topic", {
+      userId: req.user._id,
+      obj: queuePayload
+    });
 
     return {
-      message: "Your aadhar card successfully verify.",
       status: true,
-      data: { userid: req.user._id },
+      message: "Your Aadhaar card successfully verified",
+      data: { userId: req.user._id }
     };
   } catch (error) {
     console.error("Error:", error);
@@ -539,244 +539,109 @@ exports.aadharDetails = async (req) => {
 
 exports.panVerfication = async (req) => {
   try {
-    const pannumber = req.body.pannumber;
+    const { pannumber } = req.body;
 
-    // Check if Aadhaar is already used in another account
-    const findUser = await userModel.findOne({
+    if (!pannumber) {
+      return {
+        status: false,
+        message: "PAN number is required",
+        data: {}
+      };
+    }
+
+    /* ================= DUPLICATE PAN CHECK ================= */
+    const exists = await userModel.findOne({
       "pancard.pan_number": pannumber,
-      "pancard.status": 1,
+      "pancard.status": global.constant.PANCARD.APPROVED,
     });
 
-    if (findUser) {
+    if (exists) {
       return {
-        message: "This Pan is already registered with another Account.",
         status: false,
+        message: "This PAN is already registered with another account.",
         data: {},
       };
     }
 
-    // let allStates = await redisMain.getkeydata("getStates");
+    /* ================= FETCH USER ================= */
+    let user = await redisUser.getUser(req.user._id);
+    user = user ? userModel.hydrate(user) : await userModel.findById(req.user._id);
 
-    // if (!allStates) {
-    //   // If not found in Redis, fetch from MongoDB
-    //   const states = await IndianStateModel.find().select("name status");
-
-    //   if (states.length > 0) {
-    //     allStates = states.map(state => ({
-    //       name: state.name.toUpperCase(),
-    //       status: state.status
-    //     }));
-
-    //     // Store in Redis without expiry
-    //     await redisMain.setkeydata("getStates", JSON.stringify(allStates), 432000);
-    //   }
-    // } else {
-    //   // Parse the Redis string into an array
-    //   allStates = JSON.parse(allStates);
-    // }
-
-    // // Extract banned state names
-    // const bannedStateNames = allStates
-    //   .filter(state => !state.status) // Filter only banned states (status: false)
-    //   .map(state => state.name);
-
-    // // Retrieve user from Redis
-    let currentUser = await redisUser.getUser(req.user._id);
-
-    if (!currentUser) {
-      currentUser = await userModel.findById(req.user._id);
-    } else {
-      // Convert plain object to Mongoose document without inserting
-      currentUser = userModel.hydrate(currentUser);
-    }
-
-    // if (bannedStateNames.includes(currentUser.state.toUpperCase())) {
-    //   return {
-    //     message: "You're from a Banned or Restricted State, that's why you can't Verify Further.",
-    //     status: false,
-    //     data: {},
-    //   };
-    // }
-
-    // Check if user is below 18
-    const dobParts = currentUser.dob.split("-"); // Split 'DD-MM-YYYY'
-    const dobDate = new Date(`${dobParts[2]}-${dobParts[1]}-${dobParts[0]}`); // Convert to 'YYYY-MM-DD'
-    const today = new Date();
-    let age = today.getFullYear() - dobDate.getFullYear();
-
-    // Adjust age if birthday hasn't occurred yet this year
-    const monthDiff = today.getMonth() - dobDate.getMonth();
-    const dayDiff = today.getDate() - dobDate.getDate();
-    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-      age--;
-    }
-
-    if (age < 18) {
+    if (!user) {
       return {
-        message: "You must be at least 18 years old to verify.",
         status: false,
-        data: {},
+        message: "User not found",
+        data: {}
       };
     }
 
-    if (!currentUser) {
-      currentUser = await userModel.findById(req.user._id);
-    } else {
-      // Convert plain object to Mongoose document without inserting
-      currentUser = userModel.hydrate(currentUser);
+    /* ================= PAN VERIFY API ================= */
+    req.body.name = user.aadharcard?.aadhar_name;
+    req.body.dob = user.dob;
+
+    if (!req.body.name || !req.body.dob) {
+      return {
+        status: false,
+        message: "Aadhaar must be verified before PAN verification",
+        data: {}
+      };
     }
 
-    if (currentUser) {
-      req.body.name = currentUser.aadharcard.aadhar_name;
+    const response = await verificationapi.pancardVerify(req);
 
-      // Initialize daily limit data if not present
-      if (!currentUser?.pancard?.dailyLimit) {
-        currentUser.pancard = {
-          dailyLimit: {
-            count: 0,
-            lastAttemptDate: null,
-          }
-        }
-      }
-
-      const { dailyLimit } = currentUser.pancard;
-      const currentDate = moment();
-      const lastAttemptDate = dailyLimit.lastAttemptDate ? moment(dailyLimit.lastAttemptDate) : null;
-
-      // Check if the last attempt is within the same day
-      const isSameDay = lastAttemptDate && lastAttemptDate.isSame(currentDate, "day");
-      const maxAttempts = 3;
-      const remainingAttempts = maxAttempts - dailyLimit.count;
-
-      if (isSameDay && dailyLimit.count >= maxAttempts) {
-        return {
-          message: "You have reached today's limit. Please try again tomorrow.",
-          status: false,
-          data: {},
-        };
-      }
-
-      // 5-Minute Gap Check
-      if (lastAttemptDate && currentDate.diff(lastAttemptDate, "minutes") < 5) {
-        const remainingTime = 5 - currentDate.diff(lastAttemptDate, "minutes");
-        return {
-          message: `Please try again in ${remainingTime} minutes.`,
-          status: false,
-          data: {},
-        };
-      }
-
-      // Reset the counter if the day has changed
-      if (!isSameDay) {
-        dailyLimit.count = 0;
-        dailyLimit.lastAttemptDate = currentDate;
-      }
-
-      // Increment the counter and update the last attempt date
-      dailyLimit.count += 1;
-      dailyLimit.lastAttemptDate = currentDate;
-
-      // Save the user record
-      const updatedUser = await currentUser.save();
-      await redisUser.setUser(updatedUser);
-
-      let responseapi;
-      if (updatedUser) {
-        req.body.name = updatedUser.aadharcard.aadhar_name;
-        req.body.dob = updatedUser.dob;
-        responseapi = await verificationapi.pancardVerify(req);
-        // console.log("responseapi", responseapi);
-      }
-
-      if (responseapi == undefined || responseapi.status === false || responseapi === false) {
-        if (responseapi?.reason) {
-          let reason = responseapi?.reason;
-
-          switch (reason) {
-            case 'NO_MATCH':
-              return {
-                status: false,
-                message: `Your Pan Name is not matching your Aadhar Name. ${remainingAttempts - 1} attempt left.`,
-              };
-            case 'POOR_PARTIAL_MATCH':
-              return {
-                status: false,
-                message: `Your Pan Name is not matching your Aadhar Name. ${remainingAttempts - 1} attempt left.`,
-              };
-            case 'MIDDLE_NAME_MISSING':
-              return {
-                status: false,
-                message: `Your Aadhar Name is missing a middle name that is present in your Pan Name. ${remainingAttempts - 1} attempt left.`,
-              };
-            case 'PARTIAL_MATCH':
-              return {
-                status: false,
-                message: `Your Pan Name is partially matching your Aadhar Name. ${remainingAttempts - 1} attempt left.`,
-              };
-            case 'MISSING_LAST_NAME':
-              return {
-                status: false,
-                message: `The last name is missing from the Pan Name. ${remainingAttempts - 1} attempt left.`,
-              };
-            case 'INVALID_PAN':
-              return {
-                status: false,
-                message: `Invalid PAN. ${remainingAttempts - 1} attempt left.`,
-              };
-            default:
-              return {
-                status: false,
-                message: `Invalid PAN. ${remainingAttempts - 1} attempt left.`,
-              };
-          }
-        } else {
-          return {
-            status: false,
-            message: `${responseapi.message}. Contact Support Team.`
-          }
-        }
-      }
-
-      if (responseapi.status) {
-        req.body.pan_verify = 1;
-        // await pancard_Details(req);
-        const update = {};
-        update['$set'] = {
-          'user_verify.pan_verify': 1,
-        };
-        update['pancard'] = {
-          pan_number: responseapi.data.pan_response.pan,
-          pan_name: responseapi.data.pan_response.registered_name,
-          status: global.constant.PANCARD.APPROVED,
-          comment: req.body.comment ? req.body.comment : '',
-          created_at: moment().format('YYYY-MM-DD HH:mm:ss'),
-          updated_at: moment().format('YYYY-MM-DD HH:mm:ss'),
-        };
-
-        await sendToQueue("pan-verification-topic",
-          {
-            userId: req.user._id,
-            obj: update
-          }
-        );
-        // await userModel.updateOne({ _id: req.user._id }, update, { new: true });
-
-        return {
-          message: 'Your pan card request has been successfully verified.',
-          status: true,
-          data: { userid: req.user._id },
-        };
-      }
+    // ❌ API failed
+    if (response.status !== true) {
+      return {
+        status: false,
+        message: response.message || "PAN verification failed",
+        data: response.data || {}
+      };
     }
+
+    const panData = response.data;
+
+    // ❌ PAN invalid
+    if (panData.status !== "VALID") {
+      return {
+        status: false,
+        message: panData.reason || "PAN verification failed",
+        data: panData
+      };
+    }
+
+    /* ================= SUCCESS ================= */
+    const updatePayload = {
+      user_verify: { pan_verify: 1 },
+      pancard: {
+        pan_number: panData.pan_response.pan,
+        pan_name: panData.pan_response.registered_name,
+        status: global.constant.PANCARD.APPROVED,
+        created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
+        updated_at: moment().format("YYYY-MM-DD HH:mm:ss"),
+      }
+    };
+
+    await sendToQueue("pan-verification-topic", {
+      userId: req.user._id,
+      obj: updatePayload
+    });
+
+    return {
+      status: true,
+      message: "Your PAN card has been successfully verified",
+      data: { userId: req.user._id }
+    };
+
   } catch (error) {
-    console.error("Error:", error);
+    console.error("PAN Verify Error:", error);
     return {
       status: false,
-      message: "Internal Server Error.",
+      message: "Internal Server Error",
       error: error.message
     };
   }
-}
+};
+
 
 // async function pancard_Details(req) {
 //   try {
