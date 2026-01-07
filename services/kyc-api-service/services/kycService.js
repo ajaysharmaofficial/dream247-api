@@ -143,48 +143,6 @@ exports.adharCardSentOtp = async (req) => {
         data: {},
       };
     }
-
-    // Initialize aadharcard if missing
-    if (!currentUser.aadharcard) {
-      currentUser.aadharcard = { dailyLimit: { count: 0, lastAttemptDate: null } };
-    }
-
-    const { dailyLimit } = currentUser.aadharcard;
-    const currentDate = moment();
-    const lastAttemptDate = dailyLimit.lastAttemptDate ? moment(dailyLimit.lastAttemptDate) : null;
-
-    const isSameDay = lastAttemptDate && lastAttemptDate.isSame(currentDate, "day");
-    const maxAttempts = 3;
-    const remainingAttempts = maxAttempts - dailyLimit.count;
-
-    if (isSameDay && dailyLimit.count >= maxAttempts) {
-      return {
-        message: "You have reached today's limit. Please try again tomorrow.",
-        status: false,
-        data: {},
-      };
-    }
-
-    // 5-Minute Gap Check
-    if (lastAttemptDate && currentDate.diff(lastAttemptDate, "minutes") < 5) {
-      const remainingTime = 5 - currentDate.diff(lastAttemptDate, "minutes");
-      return {
-        message: `Please try again in ${remainingTime} minutes.`,
-        status: false,
-        data: {},
-      };
-    }
-
-    // Reset the counter if the day has changed
-    if (!isSameDay) {
-      dailyLimit.count = 0;
-      dailyLimit.lastAttemptDate = currentDate;
-    }
-
-    // Increment the counter and update the last attempt date
-    dailyLimit.count += 1;
-    dailyLimit.lastAttemptDate = currentDate;
-
     // Save the user record in MongoDB
     const updatedUser = await currentUser.save();
 
@@ -200,7 +158,7 @@ exports.adharCardSentOtp = async (req) => {
       return response;
     } else {
       return {
-        message: `${response.message}. ${remainingAttempts - 1} attempt left.`,
+        message: `Attempt failed.`,
         status: false,
         data: response.data || {},
       };
