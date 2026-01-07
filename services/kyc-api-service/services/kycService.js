@@ -205,7 +205,7 @@ exports.adharcardVeifyOtp = async (req) => {
         aadhar_verify: global.constant.PROFILE_VERIFY_AADHAR_BANK.APPROVE
       },
       aadharcard: {
-        state: data.split_address.state,
+        state: data.address.state,
         aadhar_number: req.body.aadharnumber,
         aadhar_dob: data.dob,
         aadhar_name: data.name.toUpperCase(),
@@ -213,9 +213,9 @@ exports.adharcardVeifyOtp = async (req) => {
         created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
         updated_at: moment().format("YYYY-MM-DD HH:mm:ss"),
         address: data.address,
-        city: data.split_address.dist,
+        city: data.address.district,
         gender,
-        pincode: data.split_address.pincode,
+        pincode: data.address.pincode,
         frontimage: data.photo_link
       }
     };
@@ -223,10 +223,10 @@ exports.adharcardVeifyOtp = async (req) => {
     const queuePayload = {
       dob: data.dob,
       address: data.address,
-      city: data.split_address.dist,
+      city: data.address.district,
       gender,
-      pincode: data.split_address.pincode,
-      state: data.split_address.state,
+      pincode: data.address.pincode,
+      state: data.address.state,
       username: data.name,
       aadharcard: update.aadharcard,
       user_verify: update.user_verify
