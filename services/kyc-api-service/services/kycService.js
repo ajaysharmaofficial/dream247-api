@@ -181,10 +181,7 @@ exports.adharcardVeifyOtp = async (req) => {
     }
 
     const response = await verificationapi.aadhaarVerifyOtp(req);
-    console.log("dataaaaaaaaaaaaaaadhaaaaaaaarrrrrr", response.status);
-    console.log("response.status != true",response.status != true);
     if (response.status != true) {
-      console.log("Aadhaar verification failed:", response.message);
       return {
         status: false,
         message: response.message || "Aadhaar verification failed."
@@ -192,8 +189,8 @@ exports.adharcardVeifyOtp = async (req) => {
     }
 
     const data = response.data;
-
-    if (data.status !== "VALID") {
+    console.log("dataaaaaaaaaaaaaaadhaaaaaaaarrrrrr", data);
+    if (data.status != "VALID") {
       return {
         status: false,
         message: "Aadhaar verification failed",
