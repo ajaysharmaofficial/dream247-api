@@ -177,18 +177,18 @@ const processAadharVerification = async () => {
 
                   if (user) {
                     await redisUser.setUser(user);
-                    const aadharBonus = await new GetBonus().getBonus(
-                      global.constant.BONUS_TYPES.AADHAR_BONUS,
-                      global.constant.PROFILE_VERIFY_AADHAR_BANK.SUBMITED
-                    );
-                    if (aadharBonus > 0) {
-                      await givebonusToUser(
-                        aadharBonus,
-                        userId,
-                        global.constant.PROFILE_VERIFY_BONUS_TYPES.AADHAR_BONUS,
-                        global.constant.USER_VERIFY_TYPES.AADHAR_VERIFY
-                      );
-                    }
+                    // const aadharBonus = await new GetBonus().getBonus(
+                    //   global.constant.BONUS_TYPES.AADHAR_BONUS,
+                    //   global.constant.PROFILE_VERIFY_AADHAR_BANK.SUBMITED
+                    // );
+                    // if (aadharBonus > 0) {
+                    //   await givebonusToUser(
+                    //     aadharBonus,
+                    //     userId,
+                    //     global.constant.PROFILE_VERIFY_BONUS_TYPES.AADHAR_BONUS,
+                    //     global.constant.USER_VERIFY_TYPES.AADHAR_VERIFY
+                    //   );
+                    // }
                     successfullyProcessedMessages.add(message.offset);
                   }
                 } catch (messageError) {
