@@ -2053,6 +2053,8 @@ exports.userOwnTransactions = async (req) => {
                 "P2P Withdrawal",
                 "P2P Deposit",
                 "Self Transfer",
+                "Spin & Win Bonus",
+                "Gems Bonus",
               ],
             },
             amount: { $ne: 0 },
