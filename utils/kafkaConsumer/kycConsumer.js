@@ -169,8 +169,7 @@ const processAadharVerification = async () => {
                     userId,
                     {
                       $set: {
-                        ...obj,
-                        "user_verify.aadhar_verify": 1
+                        ...obj
                       }
                     },
                     { new: true }
