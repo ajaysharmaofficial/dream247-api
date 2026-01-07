@@ -69,7 +69,7 @@ exports.aadhaarGenerateOtp = async (req, res) => {
         },
       }
     );
-
+    console.log(response.data);
     return {
       status: true,
       message: "Aadhaar OTP sent successfully",
@@ -115,7 +115,7 @@ exports.aadhaarVerifyOtp = async (req, res) => {
         },
       }
     );
-
+    console.log(response.data);
     return {
       status: true,
       message: "Aadhaar verified successfully",
@@ -163,7 +163,7 @@ exports.pancardVerify = async (req, res) => {
         },
       }
     );
-
+    console.log(response.data);
     return {
       status: true,
       message: "PAN verification successful",
