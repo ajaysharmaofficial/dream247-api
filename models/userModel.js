@@ -199,7 +199,7 @@ let aadharcard = new Schema({
         type: String
     },
     address: {
-        type: String
+        type: mongoose.Schema.Types.Mixed
     },
     created_at: {
         type: Date
