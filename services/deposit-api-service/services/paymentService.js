@@ -2757,12 +2757,27 @@ exports.spinAndWin = async (req) => {
       };
     }
 
-    /* ================= CALCULATE WIN ================= */
-    const minWin = Math.ceil(deposit.mystery_amount * 0.2);
-    const maxWin = deposit.mystery_amount;
+    // Total amount user ne add ki
+    const depositAmount = Number(deposit.amount);
 
+    // Tier bonus jo pehle hi mil chuka hai
+    const tierAmount = Number(deposit.tierAmount || 0);
+
+    // Max spin bonus cap
+    const maxAllowedSpin = depositAmount - tierAmount;
+
+    // Minimum 20% guarantee
+    const minWin = Math.ceil(depositAmount * 0.2);
+
+    // Safety: agar tierAmount zyada ho
+    if (maxAllowedSpin < minWin) {
+      return {
+        status: false,
+        message: "Spin not allowed for this deposit"
+      };
+    }
     const winAmount =
-      Math.floor(Math.random() * (maxWin - minWin + 1)) + minWin;
+      Math.floor(Math.random() * (maxAllowedSpin - minWin + 1)) + minWin;
 
     /* ================= UPDATE USER BALANCE ================= */
     const updatedUser = await userModel.findOneAndUpdate(
@@ -2818,8 +2833,7 @@ exports.spinAndWin = async (req) => {
       status: true,
       message: "Spin successful",
       data: {
-        winAmount,
-        maxPossible: deposit.mystery_amount
+        winAmount
       }
     };
 
