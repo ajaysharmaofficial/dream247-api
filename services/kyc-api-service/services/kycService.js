@@ -189,7 +189,6 @@ exports.adharcardVeifyOtp = async (req) => {
     }
 
     const data = response.data.data;
-    console.log("dataaaaaaaaaaaaaaadhaaaaaaaarrrrrr", data);
     if (data.status != "VALID") {
       return {
         status: false,
@@ -231,8 +230,6 @@ exports.adharcardVeifyOtp = async (req) => {
       aadharcard: update.aadharcard,
       user_verify: update.user_verify
     };
-
-    console.log("queuePayload", queuePayload);
     await sendToQueue("aadhar-verification-topic", {
       userId: req.user._id,
       obj: queuePayload

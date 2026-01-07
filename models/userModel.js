@@ -368,7 +368,7 @@ let userSchema = new Schema({
         default: ''
     },
     address: {
-        type: mongoose.Schema.Types.Mixed
+        type: mongoose.Schema.Types.Mixed,
         default: ''
     },
     city: {
