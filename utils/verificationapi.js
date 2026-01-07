@@ -196,10 +196,10 @@ exports.bankRequest = async (req) => {
 
     const config = {
       method: "post",
-      url: "https://eve.idfy.com/v3/tasks/async/verify_with_source/bank_account",
+      url: "https://eve.idfy.com/v3/tasks/async/verify_with_source/validate_bank_account",
       headers: {
-        "x-client-id": global.constant.idfyaccountid,
-        "x-client-secret": global.constant.idfyaccountsecret,
+        "api-key": global.constant.idfyaccountid,
+        "account-id": global.constant.idfyaccountsecret,
         "Content-Type": "application/json",
       },
       data: payload,
