@@ -2738,7 +2738,7 @@ exports.spinAndWin = async (req) => {
     const userId = req.user._id;
 
     const deposit = await depositModel.findOne({
-      _id: deposit_id,
+      txnid: deposit_id,
       userid: userId
     });
 
@@ -2776,7 +2776,7 @@ exports.spinAndWin = async (req) => {
     );
 
     await depositModel.updateOne(
-      { _id: deposit_id },
+      { txnid: deposit_id },
       {
         mystery_status: 'claimed',
         mystery_win_amount: winAmount,
