@@ -201,7 +201,7 @@ exports.adharcardVeifyOtp = async (req) => {
 
     const update = {
       user_verify: {
-        aadhar_verify: global.constant.PROFILE_VERIFY_AADHAR_BANK.APPROVE
+        aadhar_verify: 1
       },
       aadharcard: {
         state: data.address.state,
@@ -854,7 +854,7 @@ exports.bankVerificationReq = async (req) => {
         state,
         type,
         comment: comment || "",
-        status: global.constant.BANK.APPROVED,
+        status: 1,
         created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
         updated_at: moment().format("YYYY-MM-DD HH:mm:ss"),
       };

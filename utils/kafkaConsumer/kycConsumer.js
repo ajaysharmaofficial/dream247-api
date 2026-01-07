@@ -358,51 +358,51 @@ const processBankVerification = async () => {
 
                   if (user) {
                     await redisUser.setUser(user);
-                    const bankNameAdded = await bankDetailsModel.findOneAndUpdate(
-                      { name: obj.bankname },
-                      { $inc: { users: 1 } },
-                      { upsert: true, new: true }
-                    );
-                    if (bankNameAdded) {
-                      const disabledBanks = await bankDetailsModel.find({ status: 0 }).select("name status");
-                      if (disabledBanks.length > 0) {
-                        await redisMain.setkeydata("disabledBanks", JSON.stringify(disabledBanks), 432000);
-                      }
-                    }
-                    const bankBonus = await new GetBonus().getBonus(
-                      global.constant.BONUS_TYPES.BANK_BONUS,
-                      global.constant.PROFILE_VERIFY_AADHAR_BANK.SUBMITED
-                    );
+                    // const bankNameAdded = await bankDetailsModel.findOneAndUpdate(
+                    //   { name: obj.bankname },
+                    //   { $inc: { users: 1 } },
+                    //   { upsert: true, new: true }
+                    // );
+                    // if (bankNameAdded) {
+                    //   const disabledBanks = await bankDetailsModel.find({ status: 0 }).select("name status");
+                    //   if (disabledBanks.length > 0) {
+                    //     await redisMain.setkeydata("disabledBanks", JSON.stringify(disabledBanks), 432000);
+                    //   }
+                    // }
+                    // const bankBonus = await new GetBonus().getBonus(
+                    //   global.constant.BONUS_TYPES.BANK_BONUS,
+                    //   global.constant.PROFILE_VERIFY_AADHAR_BANK.SUBMITED
+                    // );
 
-                    if (bankBonus > 0) {
-                      const transactionId = `${global.constant.APP_SHORT_NAME}-BANKBONUS-${Date.now()}`;
-                      const updatedUser = await userModel.findOneAndUpdate(
-                        { _id: userId },
-                        { $inc: { "userbalance.bonus": bankBonus } },
-                        { new: true }
-                      );
+                    // if (bankBonus > 0) {
+                    //   const transactionId = `${global.constant.APP_SHORT_NAME}-BANKBONUS-${Date.now()}`;
+                    //   const updatedUser = await userModel.findOneAndUpdate(
+                    //     { _id: userId },
+                    //     { $inc: { "userbalance.bonus": bankBonus } },
+                    //     { new: true }
+                    //   );
 
-                      await walletTransactionModel.create({
-                        userid: userId,
-                        type: global.constant.BONUS_NAME.bankbonus,
-                        transaction_id: transactionId,
-                        transaction_by: global.constant.TRANSACTION_BY.APP_NAME,
-                        amount: bankBonus,
-                        paymentstatus: global.constant.PAYMENT_STATUS_TYPES.CONFIRMED,
-                        bonus_amt: bankBonus,
-                        win_amt: 0,
-                        addfund_amt: 0,
-                        bal_bonus_amt: updatedUser.userbalance.bonus || 0,
-                        bal_win_amt: updatedUser.userbalance.balance || 0,
-                        bal_fund_amt: updatedUser.userbalance.winning || 0,
-                        total_available_amt: (updatedUser.userbalance.balance || 0) + (updatedUser.userbalance.winning || 0) + (updatedUser.userbalance.bonus || 0),
-                        withdraw_amt: 0,
-                        challenge_join_amt: 0,
-                        cons_bonus: 0,
-                        cons_win: 0,
-                        cons_amount: 0,
-                      });
-                    }
+                    //   await walletTransactionModel.create({
+                    //     userid: userId,
+                    //     type: global.constant.BONUS_NAME.bankbonus,
+                    //     transaction_id: transactionId,
+                    //     transaction_by: global.constant.TRANSACTION_BY.APP_NAME,
+                    //     amount: bankBonus,
+                    //     paymentstatus: global.constant.PAYMENT_STATUS_TYPES.CONFIRMED,
+                    //     bonus_amt: bankBonus,
+                    //     win_amt: 0,
+                    //     addfund_amt: 0,
+                    //     bal_bonus_amt: updatedUser.userbalance.bonus || 0,
+                    //     bal_win_amt: updatedUser.userbalance.balance || 0,
+                    //     bal_fund_amt: updatedUser.userbalance.winning || 0,
+                    //     total_available_amt: (updatedUser.userbalance.balance || 0) + (updatedUser.userbalance.winning || 0) + (updatedUser.userbalance.bonus || 0),
+                    //     withdraw_amt: 0,
+                    //     challenge_join_amt: 0,
+                    //     cons_bonus: 0,
+                    //     cons_win: 0,
+                    //     cons_amount: 0,
+                    //   });
+                    // }
                     // Store the processed offset
                     successfullyProcessedMessages.add(message.offset);
                   }
