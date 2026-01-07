@@ -206,7 +206,7 @@ exports.adharcardVeifyOtp = async (req) => {
       aadharcard: {
         state: data.address.state,
         aadhar_number: req.body.aadharnumber,
-        aadhar_dob: data.dob,
+        aadhar_dob: data.date_of_birth,
         aadhar_name: data.name.toUpperCase(),
         status: global.constant.AADHARCARD.APPROVED,
         created_at: moment().format("YYYY-MM-DD HH:mm:ss"),

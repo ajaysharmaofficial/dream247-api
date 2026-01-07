@@ -16,7 +16,7 @@ router.post("/adharcard-send-otp", auth, kycController.adharCardSentOtp);
 
 router.post("/adharcard-verify-otp", auth, kycController.adharcardVeifyOtp);
 // router.get("/getaadharDetails", auth, kycController.aadharDetails);
-router.post("/pan-verifcation", auth, kycController.panVerfication);
+router.post("/pan-verification", auth, kycController.panVerfication);
 // router.get("/getpandetails", auth, kycController.panDetails);
 router.post("/bank-verfication-req", auth, kycController.bankVerificationReq);
 router.get("/fetch-bank-details", auth, kycController.fetchBankDetails);
