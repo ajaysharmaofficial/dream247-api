@@ -2750,10 +2750,6 @@ exports.spinAndWin = async (req) => {
       return { status: false, message: "Spin already used or expired" };
     }
 
-    if (deposit.mystery_amount <= 0) {
-      return { status: false, message: "No spin gems available" };
-    }
-
     const minWin = Math.ceil(deposit.mystery_amount * 0.2);
     const maxWin = deposit.mystery_amount;
 
