@@ -264,19 +264,19 @@ const processPanVerification = async () => {
 
                   if (user) {
                     await redisUser.setUser(user);
-                    const panBonus = await new GetBonus().getBonus(
-                      global.constant.BONUS_TYPES.PAN_BONUS,
-                      global.constant.PROFILE_VERIFY_PAN_BANK.SUBMITED
-                    );
-                    // Give the bank bonus to the user and update their verification status
-                    if (panBonus > 0) {
-                      await givebonusToUser(
-                        panBonus,
-                        userId,
-                        global.constant.PROFILE_VERIFY_BONUS_TYPES.PAN_BONUS,
-                        global.constant.USER_VERIFY_TYPES.PROFILE_VERIFY_PAN_BANK
-                      );
-                    }
+                    // const panBonus = await new GetBonus().getBonus(
+                    //   global.constant.BONUS_TYPES.PAN_BONUS,
+                    //   global.constant.PROFILE_VERIFY_PAN_BANK.SUBMITED
+                    // );
+                    // // Give the bank bonus to the user and update their verification status
+                    // if (panBonus > 0) {
+                    //   await givebonusToUser(
+                    //     panBonus,
+                    //     userId,
+                    //     global.constant.PROFILE_VERIFY_BONUS_TYPES.PAN_BONUS,
+                    //     global.constant.USER_VERIFY_TYPES.PROFILE_VERIFY_PAN_BANK
+                    //   );
+                    // }
                     // Store the processed offset
                     successfullyProcessedMessages.add(message.offset);
                   }
