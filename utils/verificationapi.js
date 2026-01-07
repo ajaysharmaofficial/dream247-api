@@ -184,45 +184,42 @@ exports.bankRequest = async (req) => {
       };
     }
 
-    const payload = {
-      task_id: "bank_verify_" + Date.now(),
-      group_id: "bank_group_" + Date.now(),
-      data: {
-        bank_account_no: accno,
+    const token = await getSandboxToken();
+
+    const response = await axios.post(
+      "https://api.sandbox.co.in/kyc/bank/verify",
+      {
+        "@entity": "in.co.sandbox.kyc.bank_verification.request",
+        bank_account_number: accno,
         bank_ifsc_code: ifsc,
-        nf_verification: false, // optional
+        consent: "Y",
+        reason: "Bank account verification"
       },
-    };
+      {
+        headers: {
+          Authorization: token,
+          "x-api-key": global.constant.sanboxclientid,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-    const config = {
-      method: "post",
-      url: "https://eve.idfy.com/v3/tasks/async/verify_with_source/validate_bank_account",
-      headers: {
-        "api-key": global.constant.idfyapikey,
-        "account-id": global.constant.idfyaccountid,
-        "Content-Type": "application/json",
-      },
-      data: payload,
-    };
-
-    const response = await axios.request(config);
-    console.log("response", response);
     return {
       status: true,
-      message: "Bank verification request submitted successfully",
+      message: "Bank verification successful",
       data: response.data,
     };
 
   } catch (error) {
     console.error(
-      "Bank Verification Error:",
+      "Sandbox Bank Verification Error:",
       error?.response?.data || error.message
     );
 
     return {
       status: false,
-      message: "Bank verification failed",
-      error: error?.response?.data || error.message,
+      message: error?.response?.data?.message || "Bank verification failed",
+      data: error?.response?.data || {},
     };
   }
 };

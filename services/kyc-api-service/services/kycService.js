@@ -794,88 +794,94 @@ exports.panDetails = async (req) => {
 
 exports.bankVerificationReq = async (req) => {
   try {
-    const { accno, confirm_accno, ifsc, accountholder, bankName, city, state, type, comment } = req.body;
-    if (!accno) return { message: "Please insert your account number.", status: false, data: {} };
-    if (!confirm_accno) return { message: "Please insert your confirm account number.", status: false, data: {} };
-    if (!ifsc) return { message: "Please insert your IFSC code.", status: false, data: {} };
-    if (!accountholder) return { message: "Please insert account holder name.", status: false, data: {} };
-    if (!bankName) return { message: "Please insert bank name.", status: false, data: {} };
-    if (!city) return { message: "Please insert city.", status: false, data: {} };
+    const {
+      accno,
+      confirm_accno,
+      ifsc,
+      accountholder,
+      bankName,
+      city,
+      state,
+      type,
+      comment
+    } = req.body;
 
-    const existingUser = await userModel.findOne({ "bank.accno": accno, "bank.status": 1 });
+    if (!accno) return { status: false, message: "Please insert your account number." };
+    if (!confirm_accno) return { status: false, message: "Please insert confirm account number." };
+    if (accno !== confirm_accno) return { status: false, message: "Account number mismatch." };
+    if (!ifsc) return { status: false, message: "Please insert IFSC code." };
+    if (!accountholder) return { status: false, message: "Please insert account holder name." };
+    if (!bankName) return { status: false, message: "Please insert bank name." };
+    if (!city) return { status: false, message: "Please insert city." };
+
+    const existingUser = await userModel.findOne({
+      "bank.accno": accno,
+      "bank.status": global.constant.BANK.APPROVED
+    });
+
     if (existingUser) {
       return {
-        message: "This Bank Account is already registered with other Account.",
         status: false,
-        data: {},
+        message: "This bank account is already registered with another account."
       };
     }
 
-    const response = await verificationapi.bankRequest(req);
+    /* ================= SANDBOX BANK VERIFY ================= */
+    const bankRes = await verificationapi.bankRequest(req);
 
-    console.log("response", response);
-    return {
-      status: false,
-      message: "Internal Server Error.",
-      error: error.message
-    };
-    // Retrieve user from Redis
+    if (!bankRes.status || bankRes.data?.status?.toLowerCase() !== "valid") {
+      return {
+        status: false,
+        message: "Bank verification failed",
+        data: bankRes.data || {}
+      };
+    }
+
+    /* ================= USER LOAD ================= */
     let currentUser = await redisUser.getUser(req.user._id);
 
     if (!currentUser) {
       currentUser = await userModel.findById(req.user._id);
     } else {
-      // Convert plain object to Mongoose document without inserting
       currentUser = userModel.hydrate(currentUser);
     }
 
-    if (currentUser) {
-      req.body.name = req.body.accountholder;
+    const bankData = {
+      accountholder: accountholder.toUpperCase(),
+      accno,
+      confirm_accno,
+      ifsc: ifsc.toUpperCase(),
+      bankname: bankName,
+      bankbranch: bankName,
+      city,
+      state,
+      type,
+      comment: comment || "",
+      status: global.constant.BANK.APPROVED,
+      created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
+      updated_at: moment().format("YYYY-MM-DD HH:mm:ss"),
+    };
 
+    await sendToQueue("bank-verification-topic", {
+      userId: req.user._id,
+      obj: { bank: bankData }
+    });
 
+    return {
+      status: true,
+      message: "Bank verification request submitted successfully",
+      data: { userid: req.user._id }
+    };
 
-      // Save the user record
-      const updatedUser = await currentUser.save();
-      await redisUser.setUser(updatedUser);
-
-      const fetchBankDetails = {
-        accountholder: req.body.accountholder.toUpperCase(),
-        accno,
-        ifsc: ifsc.toUpperCase(),
-        bankname: req.body.bankName,
-        bankbranch: req.body.bankName,
-        state,
-        city: req.body.city,
-        confirm_accno,
-        type,
-        comment: comment || "",
-        status: global.constant.BANK.APPROVED,
-        created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
-        updated_at: moment().format("YYYY-MM-DD HH:mm:ss"),
-      };
-
-      await sendToQueue('bank-verification-topic',
-        {
-          userId: req.user._id,
-          obj: fetchBankDetails
-        }
-      )
-
-      return {
-        message: "Bank Request Successfully verified.",
-        status: true,
-        data: { userid: req.user._id },
-      };
-    }
   } catch (error) {
-    console.error("Error:", error);
+    console.error("bankVerificationReq Error:", error);
     return {
       status: false,
-      message: "Internal Server Error.",
+      message: "Internal Server Error",
       error: error.message
     };
   }
-}
+};
 
 exports.fetchBankDetails = async (req) => {
   try {
