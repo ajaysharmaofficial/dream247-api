@@ -2356,14 +2356,18 @@ const creditReferralCommission = async ({ userId, amount, txnid }) => {
   );
 
   /* ================= UPDATE PROMOTER BALANCE ================= */
-  await userModel.updateOne(
-    { _id: parentUser._id },
-    {
-      $inc: {
-        "userbalance.promoter_balance": commissionAmount
-      }
+  const updateObj = {
+    $inc: {
+      "userbalance.promoter_balance": -amount
     }
-  );
+  };
+
+  // NEVER allow _id in update
+  delete updateObj._id;
+
+  await userModel.updateOne({ _id: promoterId }, updateObj);
+
+
 
   /* ================= LEDGER ENTRY ================= */
   await promoterCommissionLogsModel.create({
