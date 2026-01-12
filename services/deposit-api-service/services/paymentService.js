@@ -2342,11 +2342,16 @@ const creditReferralCommission = async ({ userId, amount, txnid }) => {
   /* ================= PARENT / PROMOTER ================= */
   const parentUser = await userModel
     .findById(childUser.refer_id)
-    .select("userbalance.promoter_balance");
+    .select("userbalance.promoter_balance percentage");
 
   if (!parentUser) return;
 
-  const commissionAmount = Number((amount * 0.10).toFixed(2));
+  const percentage = parentUser.percentage || 0;
+  if (percentage <= 0) return;
+
+  const commissionAmount = Number(
+    ((amount * percentage) / 100).toFixed(2)
+  );
 
   const oldBalance =
     parentUser.userbalance?.promoter_balance || 0;
