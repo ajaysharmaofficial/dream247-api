@@ -1382,7 +1382,7 @@ exports.userRefferals = async (req) => {
     /* ================= PROMOTER BALANCE ================= */
     const promoter = await userModel
       .findById(promoterId)
-      .select("promoter_balance");
+      .select("userbalance.promoter_balance");
 
     if (!promoter) {
       return {
@@ -1392,7 +1392,8 @@ exports.userRefferals = async (req) => {
       };
     }
 
-    const promoterBalance = promoter.promoter_balance || 0;
+    const promoterBalance =
+      promoter.userbalance?.promoter_balance || 0;
 
     /* ================= REFERRED USERS ================= */
     const referredUsers = await userModel.aggregate([
