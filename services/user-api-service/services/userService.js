@@ -7,6 +7,7 @@ const moment = require("moment");
 const mailgun = require("mailgun-js");
 
 const userModel = require("../../../models/userModel");
+const promoterCommissionLogsModel = require("../../../models/promoterCommissionLogsModel.js");
 const configModel = require("../../../models/configModel.js");
 const walletTransactionModel = require("../../../models/walletTransactionModel.js");
 const adminModel = require("../../../models/adminModel");
