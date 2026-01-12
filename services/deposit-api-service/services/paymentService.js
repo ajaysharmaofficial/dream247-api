@@ -2356,18 +2356,14 @@ const creditReferralCommission = async ({ userId, amount, txnid }) => {
   );
 
   /* ================= UPDATE PROMOTER BALANCE ================= */
-  const updateObj = {
-    $inc: {
-      "userbalance.promoter_balance": -amount
+  await userModel.updateOne(
+    { _id: parentUser._id },
+    {
+      $inc: {
+        "userbalance.promoter_balance": commissionAmount
+      }
     }
-  };
-
-  // NEVER allow _id in update
-  delete updateObj._id;
-
-  await userModel.updateOne({ _id: promoterId }, updateObj);
-
-
+  );
 
   /* ================= LEDGER ENTRY ================= */
   await promoterCommissionLogsModel.create({
@@ -2383,6 +2379,7 @@ const creditReferralCommission = async ({ userId, amount, txnid }) => {
     remark: "Referral commission credited"
   });
 };
+
 
 
 exports.razorPayPaymentVerify = async (req) => {
@@ -2424,11 +2421,11 @@ exports.razorPayPaymentVerify = async (req) => {
       payment_id: razorpay_payment_id
     });
 
-    await creditReferralCommission({
-      userId: paymentData.userid,
-      amount: paymentData.amount,
-      txnid: paymentData.txnid
-    });
+    // await creditReferralCommission({
+    //   userId: paymentData.userid,
+    //   amount: paymentData.amount,
+    //   txnid: paymentData.txnid
+    // });
 
     return { status: true, message: "Payment verified & Game token and Shopping token credited successfully" };
 
@@ -2787,11 +2784,11 @@ exports.razorPayCallback = async (req) => {
 
     await redisPayment.updateTDSdata(paymentData.userid, tdsWallet);
 
-    await creditReferralCommission({
-      userId: paymentData.userid,
-      amount: paymentData.amount,
-      txnid: paymentData.txnid
-    });
+    // await creditReferralCommission({
+    //   userId: paymentData.userid,
+    //   amount: paymentData.amount,
+    //   txnid: paymentData.txnid
+    // });
 
     return { status: true, message: "Payment processed successfully" };
 
