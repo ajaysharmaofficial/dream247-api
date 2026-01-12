@@ -22,7 +22,10 @@ let userbalance = new Schema({
         type: Number,
         default: 0
     },
-
+    promoter_balance: {
+        type: Number,
+        default: 0
+    },
     passes: {
         type: Number,
         default: 0
