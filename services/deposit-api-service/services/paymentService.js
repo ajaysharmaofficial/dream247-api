@@ -12,6 +12,7 @@ const TransactionModel = require("../../../models/walletTransactionModel");
 const phonepeLogsModel = require("../../../models/phonepeLogsModel");
 const { sendToQueue } = require('../../../utils/kafka');
 const cashbackModel = require('../../../models/depositCashbackModel');
+const promoterCommissionLogsModel = require('../../../models/promoterCommissionLogsModel');
 const redisMain = require('../../../utils/redis/redisMain');
 // const selfTransferModel = require("../../../models/selfTransferModel");
 const redisUser = require('../../../utils/redis/redisUser');
