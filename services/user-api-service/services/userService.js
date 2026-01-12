@@ -1368,6 +1368,14 @@ exports.uploadUserProfileImage = async (req) => {
 
 exports.userRefferals = async (req) => {
   try {
+    if (!req.user || !req.user._id) {
+      return {
+        status: false,
+        message: "Unauthorized access",
+        data: {}
+      };
+    }
+
     const promoterId = new mongoose.Types.ObjectId(req.user._id);
 
     /* ================= PROMOTER BALANCE ================= */
@@ -1375,7 +1383,15 @@ exports.userRefferals = async (req) => {
       .findById(promoterId)
       .select("promoter_balance");
 
-    const promoterBalance = promoter?.promoter_balance || 0;
+    if (!promoter) {
+      return {
+        status: false,
+        message: "User not found",
+        data: {}
+      };
+    }
+
+    const promoterBalance = promoter.promoter_balance || 0;
 
     /* ================= REFERRED USERS ================= */
     const referredUsers = await userModel.aggregate([
@@ -1404,16 +1420,16 @@ exports.userRefferals = async (req) => {
       { $sort: { createdAt: -1 } }
     ]);
 
-    /* ================= COMMISSION TRANSACTIONS ================= */
-    const commissionTransactions = await promoterCommissionLogsModel
+    /* ================= ALL LEDGER TRANSACTIONS ================= */
+    const transactions = await promoterCommissionLogsModel
       .find({ promoterId })
       .select(
-        "fromUserId amount percentage transactionType reason balanceBefore balanceAfter referenceTxnId createdAt"
+        "fromUserId amount percentage transactionType reason balanceBefore balanceAfter referenceTxnId status createdAt"
       )
       .populate("fromUserId", "fullname username")
       .sort({ createdAt: -1 });
 
-    /* ================= TOTAL COMMISSION ================= */
+    /* ================= TOTAL COMMISSION (ONLY CREDIT) ================= */
     const totalCommissionAgg = await promoterCommissionLogsModel.aggregate([
       {
         $match: {
@@ -1436,11 +1452,13 @@ exports.userRefferals = async (req) => {
     return {
       status: true,
       message: "Referral dashboard fetched successfully",
-      promoterBalance,
-      totalReferrals: referredUsers.length,
-      totalCommission,
-      referredUsers,
-      commissionTransactions
+      data: {
+        promoterBalance,
+        totalReferrals: referredUsers.length,
+        totalCommission,
+        referredUsers,
+        transactions
+      }
     };
   } catch (error) {
     console.error("Referral Dashboard Error:", error);
@@ -1451,6 +1469,7 @@ exports.userRefferals = async (req) => {
     };
   }
 };
+
 
 
 exports.getUserReferCode = async (req) => {
