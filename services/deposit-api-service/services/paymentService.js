@@ -2421,11 +2421,11 @@ exports.razorPayPaymentVerify = async (req) => {
       payment_id: razorpay_payment_id
     });
 
-    // await creditReferralCommission({
-    //   userId: paymentData.userid,
-    //   amount: paymentData.amount,
-    //   txnid: paymentData.txnid
-    // });
+    await creditReferralCommission({
+      userId: paymentData.userid,
+      amount: paymentData.amount,
+      txnid: paymentData.txnid
+    });
 
     return { status: true, message: "Payment verified & Game token and Shopping token credited successfully" };
 
@@ -2520,7 +2520,7 @@ async function processSuccessfulDeposit(paymentData, razorpayData) {
       gems_txn: gemsTxnId
     }
   );
-
+  console.log("updatedUser", updatedUser);
   await this.addAmountTransaction(updatedUser, amountWithGst, "Cash added", "fund", paymentData.txnid);
   await this.addAmountTransaction(updatedUser, tiers.tokenAmount, "Gems Bonus", "bonus", gemsTxnId);
 
@@ -2784,11 +2784,11 @@ exports.razorPayCallback = async (req) => {
 
     await redisPayment.updateTDSdata(paymentData.userid, tdsWallet);
 
-    // await creditReferralCommission({
-    //   userId: paymentData.userid,
-    //   amount: paymentData.amount,
-    //   txnid: paymentData.txnid
-    // });
+    await creditReferralCommission({
+      userId: paymentData.userid,
+      amount: paymentData.amount,
+      txnid: paymentData.txnid
+    });
 
     return { status: true, message: "Payment processed successfully" };
 
