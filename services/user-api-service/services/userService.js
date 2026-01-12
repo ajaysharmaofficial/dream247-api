@@ -1404,6 +1404,8 @@ exports.userRefferals = async (req) => {
         $project: {
           fullname: 1,
           username: 1,
+          mobile: 1,
+          email: 1,
           image: {
             $cond: {
               if: {
@@ -1428,7 +1430,7 @@ exports.userRefferals = async (req) => {
       .select(
         "fromUserId amount percentage transactionType reason balanceBefore balanceAfter referenceTxnId status createdAt"
       )
-      .populate("fromUserId", "fullname username")
+      .populate("fromUserId", "fullname username mobile email")
       .sort({ createdAt: -1 });
 
     /* ================= TOTAL COMMISSION (ONLY CREDIT) ================= */
