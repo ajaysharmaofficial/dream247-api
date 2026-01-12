@@ -1368,43 +1368,90 @@ exports.uploadUserProfileImage = async (req) => {
 
 exports.userRefferals = async (req) => {
   try {
-    let pip = [];
-    pip.push({
-      $match: {
-        refer_id: mongoose.Types.ObjectId(req.user._id),
+    const promoterId = new mongoose.Types.ObjectId(req.user._id);
+
+    /* ================= PROMOTER BALANCE ================= */
+    const promoter = await userModel
+      .findById(promoterId)
+      .select("promoter_balance");
+
+    const promoterBalance = promoter?.promoter_balance || 0;
+
+    /* ================= REFERRED USERS ================= */
+    const referredUsers = await userModel.aggregate([
+      {
+        $match: { refer_id: promoterId }
       },
-    });
-    pip.push({
-      $project: {
-        fullname: 1,
-        username: 1,
-        image: {
-          $cond: {
-            if: {
-              $and: [{ $ne: ["$image", ""] }, { $ne: ["$image", "null"] }],
-            },
-            then: "$image",
-            else: "/avtar1.png",
+      {
+        $project: {
+          fullname: 1,
+          username: 1,
+          image: {
+            $cond: {
+              if: {
+                $and: [
+                  { $ne: ["$image", ""] },
+                  { $ne: ["$image", null] }
+                ]
+              },
+              then: "$image",
+              else: "/avtar1.png"
+            }
           },
-        },
-        referCount: { $sum: 1 },
+          createdAt: 1
+        }
       },
-    });
-    const data = await userModel.aggregate(pip);
+      { $sort: { createdAt: -1 } }
+    ]);
+
+    /* ================= COMMISSION TRANSACTIONS ================= */
+    const commissionTransactions = await promoterCommissionLogsModel
+      .find({ promoterId })
+      .select(
+        "fromUserId amount percentage transactionType reason balanceBefore balanceAfter referenceTxnId createdAt"
+      )
+      .populate("fromUserId", "fullname username")
+      .sort({ createdAt: -1 });
+
+    /* ================= TOTAL COMMISSION ================= */
+    const totalCommissionAgg = await promoterCommissionLogsModel.aggregate([
+      {
+        $match: {
+          promoterId,
+          transactionType: "CREDIT",
+          reason: "COMMISSION"
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" }
+        }
+      }
+    ]);
+
+    const totalCommission =
+      totalCommissionAgg.length > 0 ? totalCommissionAgg[0].total : 0;
+
     return {
       status: true,
-      message: "refer User",
-      data,
+      message: "Referral dashboard fetched successfully",
+      promoterBalance,
+      totalReferrals: referredUsers.length,
+      totalCommission,
+      referredUsers,
+      commissionTransactions
     };
   } catch (error) {
-    console.error("User Refer List Error:", error);
+    console.error("Referral Dashboard Error:", error);
     return {
       status: false,
-      message: "Something went wrong. Please try again after some time.",
-      data: {},
+      message: "Something went wrong. Please try again later.",
+      data: {}
     };
   }
 };
+
 
 exports.getUserReferCode = async (req) => {
   try {
