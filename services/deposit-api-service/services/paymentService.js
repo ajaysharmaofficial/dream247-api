@@ -2498,7 +2498,6 @@ async function processSuccessfulDeposit(paymentData, razorpayData) {
   );
 
   /* ================= DB UPDATE ================= */
-  console.log("paymentData", paymentData);
   const updatedUser = await userModel.findOneAndUpdate(
     { _id: paymentData.userid },
     {
@@ -2521,7 +2520,6 @@ async function processSuccessfulDeposit(paymentData, razorpayData) {
       gems_txn: gemsTxnId
     }
   );
-  console.log("updatedUser", updatedUser);
   await this.addAmountTransaction(updatedUser, amountWithGst, "Cash added", "fund", paymentData.txnid);
   await this.addAmountTransaction(updatedUser, tiers.tokenAmount, "Gems Bonus", "bonus", gemsTxnId);
 
