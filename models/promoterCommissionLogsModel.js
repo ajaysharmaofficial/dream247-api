@@ -4,7 +4,7 @@ const promoterCommissionLogsSchema = new mongoose.Schema(
     {
         promoterId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "users",
+            ref: "user",
             required: true,
             index: true
         },
@@ -12,7 +12,7 @@ const promoterCommissionLogsSchema = new mongoose.Schema(
         // From which user commission came (nullable)
         fromUserId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "users",
+            ref: "user",
             default: null
         },
 
