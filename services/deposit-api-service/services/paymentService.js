@@ -2330,26 +2330,42 @@ function decryptResponse(encryptedText, secretKey, iv) {
 // }
 
 const creditReferralCommission = async ({ userId, amount, txnid }) => {
-  if (!userId || !amount) return;
+  if (!userId || !amount || amount <= 0) return;
 
-  const childUser = await userModel.findById(userId).select("refer_id");
+  /* ================= CHILD USER ================= */
+  const childUser = await userModel
+    .findById(userId)
+    .select("refer_id");
+
   if (!childUser || !childUser.refer_id) return;
 
-  const parentUser = await userModel.findById(childUser.refer_id)
-    .select("promoter_balance");
+  /* ================= PARENT / PROMOTER ================= */
+  const parentUser = await userModel
+    .findById(childUser.refer_id)
+    .select("userbalance.promoter_balance");
 
   if (!parentUser) return;
 
   const commissionAmount = Number((amount * 0.10).toFixed(2));
 
-  const oldBalance = parentUser.promoter_balance || 0;
-  const newBalance = Number((oldBalance + commissionAmount).toFixed(2));
+  const oldBalance =
+    parentUser.userbalance?.promoter_balance || 0;
 
-  await userModel.updateOne(
-    { _id: parentUser._id },
-    { $inc: { promoter_balance: commissionAmount } }
+  const newBalance = Number(
+    (oldBalance + commissionAmount).toFixed(2)
   );
 
+  /* ================= UPDATE PROMOTER BALANCE ================= */
+  await userModel.updateOne(
+    { _id: parentUser._id },
+    {
+      $inc: {
+        "userbalance.promoter_balance": commissionAmount
+      }
+    }
+  );
+
+  /* ================= LEDGER ENTRY ================= */
   await promoterCommissionLogsModel.create({
     promoterId: parentUser._id,
     fromUserId: childUser._id,
