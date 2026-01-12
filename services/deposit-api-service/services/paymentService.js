@@ -2328,6 +2328,42 @@ function decryptResponse(encryptedText, secretKey, iv) {
 //     }
 // }
 
+const creditReferralCommission = async ({ userId, amount, txnid }) => {
+  if (!userId || !amount) return;
+
+  const childUser = await userModel.findById(userId).select("refer_id");
+  if (!childUser || !childUser.refer_id) return;
+
+  const parentUser = await userModel.findById(childUser.refer_id)
+    .select("promoter_balance");
+
+  if (!parentUser) return;
+
+  const commissionAmount = Number((amount * 0.10).toFixed(2));
+
+  const oldBalance = parentUser.promoter_balance || 0;
+  const newBalance = Number((oldBalance + commissionAmount).toFixed(2));
+
+  await userModel.updateOne(
+    { _id: parentUser._id },
+    { $inc: { promoter_balance: commissionAmount } }
+  );
+
+  await promoterCommissionLogsModel.create({
+    promoterId: parentUser._id,
+    fromUserId: childUser._id,
+    transactionType: "CREDIT",
+    reason: "COMMISSION",
+    referenceTxnId: txnid,
+    percentage: 10,
+    amount: commissionAmount,
+    balanceBefore: oldBalance,
+    balanceAfter: newBalance,
+    remark: "Referral commission credited"
+  });
+};
+
+
 exports.razorPayPaymentVerify = async (req) => {
   try {
     const {
@@ -2365,6 +2401,12 @@ exports.razorPayPaymentVerify = async (req) => {
 
     await processSuccessfulDeposit.call(this, paymentData, {
       payment_id: razorpay_payment_id
+    });
+
+    await creditReferralCommission({
+      userId: paymentData.userid,
+      amount: paymentData.amount,
+      txnid: paymentData.txnid
     });
 
     return { status: true, message: "Payment verified & Game token and Shopping token credited successfully" };
@@ -2723,6 +2765,12 @@ exports.razorPayCallback = async (req) => {
     }
 
     await redisPayment.updateTDSdata(paymentData.userid, tdsWallet);
+
+    await creditReferralCommission({
+      userId: paymentData.userid,
+      amount: paymentData.amount,
+      txnid: paymentData.txnid
+    });
 
     return { status: true, message: "Payment processed successfully" };
 
