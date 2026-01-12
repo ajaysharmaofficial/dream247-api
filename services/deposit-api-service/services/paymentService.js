@@ -2498,6 +2498,7 @@ async function processSuccessfulDeposit(paymentData, razorpayData) {
   );
 
   /* ================= DB UPDATE ================= */
+  console.log("paymentData", paymentData);
   const updatedUser = await userModel.findOneAndUpdate(
     { _id: paymentData.userid },
     {
