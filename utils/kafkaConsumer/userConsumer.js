@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { Kafka } = require('kafkajs');
 const Transaction = require('../../models/walletTransactionModel');
 const Admin = require('../../models/adminModel');
-
+const redisUser = require("../../utils/redis/redisUser");
 // const kafka = new Kafka({
 //     clientId: 'test-client',
 //     brokers: [
