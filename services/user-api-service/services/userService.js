@@ -3865,9 +3865,11 @@ exports.verifyPhoneAndGetToken = async (req) => {
       .setIssuedAt()
       .sign(secret);
 
-    // Update user's auth_key
-    user.auth_key = token;
+    // Update user's auth_key in database first
     await userModel.updateOne({ _id: user._id }, { auth_key: token });
+    
+    // Update in memory and cache in Redis
+    user.auth_key = token;
     await redisUser.setUser(user);
 
     return {
