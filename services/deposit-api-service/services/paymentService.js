@@ -2846,8 +2846,7 @@ exports.spinAndWin = async (req) => {
         message: "Spin not allowed for this deposit"
       };
     }
-    const winAmount =
-      Math.floor(Math.random() * (maxAllowedSpin - minWin + 1)) + minWin;
+    const winAmount = maxAllowedSpin;
 
     /* ================= UPDATE USER BALANCE ================= */
     const updatedUser = await userModel.findOneAndUpdate(
