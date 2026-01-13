@@ -18,6 +18,8 @@ router.post("/add-temporary-user", userController.addTempUser);
 
 router.post("/verify-otp", userController.verifyOtp);
 
+router.post("/verify-phone-and-get-token", userController.verifyPhoneAndGetToken);
+
 router.post("/logout-user", auth, userController.logout);
 
 router.post("/otp-resend", userController.otpResend);

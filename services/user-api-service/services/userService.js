@@ -3772,3 +3772,123 @@ exports.MaintenanceCheck = async (req) => {
     };
   }
 };
+
+exports.verifyPhoneAndGetToken = async (req) => {
+  try {
+    const { phoneNumber } = req.body;
+
+    // Validate input
+    if (!phoneNumber) {
+      return {
+        status: false,
+        message: "Phone number is required",
+        data: {},
+      };
+    }
+
+    let user = null;
+    let isNewUser = false;
+
+    // Check for existing user in Redis first
+    let keyMobile = `user-${phoneNumber}`;
+    let userId = await redisUser.getkeydata(keyMobile);
+
+    if (!userId) {
+      // Fetch user from DB if not in Redis
+      user = await userModel.findOne({ mobile: phoneNumber });
+      if (user) {
+        userId = user._id.toString();
+        await redisUser.setUser(user);
+        await redisUser.setkeydata(keyMobile, userId, 60 * 60 * 60);
+      }
+    } else {
+      // Fetch user from Redis
+      user = await redisUser.getUser(userId);
+      if (!user) {
+        user = await userModel.findById(userId);
+        if (user) await redisUser.setUser(user);
+      }
+    }
+
+    // Create new user if not found
+    if (!user) {
+      isNewUser = true;
+      const refer_code = await genrateReferCode(phoneNumber);
+      const team = await generateTeamName(phoneNumber);
+      const newUserId = new mongoose.Types.ObjectId();
+
+      user = new userModel({
+        _id: newUserId,
+        mobile: phoneNumber,
+        refer_code: refer_code,
+        team: team,
+        status: "activated",
+        user_verify: {
+          mobile_verify: 1,
+        },
+        userbalance: {
+          balance: 0,
+          winning: 0,
+          bonus: 0,
+          coin: 0,
+          ticket: 0,
+          promoter_balance: 0,
+          passes: 0,
+          extraCash: 0,
+        },
+      });
+
+      await user.save();
+      await redisUser.setUser(user);
+      await redisUser.setkeydata(keyMobile, newUserId.toString(), 60 * 60 * 60);
+    }
+
+    // Check if user is blocked
+    if (user.status && user.status.toLowerCase() === "blocked") {
+      return {
+        status: false,
+        message: "Account blocked. Please contact administrator.",
+        data: {},
+      };
+    }
+
+    // Generate JWT token using the same method as verifyOtp
+    const crypto = await import("node:crypto");
+    if (!globalThis.crypto) {
+      globalThis.crypto = crypto.webcrypto;
+    }
+
+    const { SignJWT } = await import("jose");
+    const secret = Buffer.from(global.constant.SECRET_TOKEN);
+    const token = await new SignJWT({ _id: user._id.toString() })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt()
+      .sign(secret);
+
+    // Update user's auth_key
+    user.auth_key = token;
+    await userModel.updateOne({ _id: user._id }, { auth_key: token });
+    await redisUser.setUser(user);
+
+    return {
+      status: true,
+      message: isNewUser
+        ? "New user created successfully"
+        : "User logged in successfully",
+      data: {
+        auth_key: token,
+        userid: user._id.toString(),
+        mobile: user.mobile,
+        team: user.team,
+        refer_code: user.refer_code,
+      },
+    };
+  } catch (error) {
+    console.error("verifyPhoneAndGetToken Error:", error);
+    return {
+      status: false,
+      message: "Something went wrong. Please try again after some time.",
+      data: {},
+    };
+  }
+};
