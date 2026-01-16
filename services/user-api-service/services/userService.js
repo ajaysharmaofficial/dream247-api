@@ -1044,6 +1044,7 @@ exports.verifyOtp = async (req) => {
         userId: user._id.toString(),
         mobile: user.mobile,
         modules: user.modules || ['shop', 'fantasy'],
+        // Use !== false to treat undefined/null as enabled (defaults to true in schema)
         shop_enabled: user.shop_enabled !== false,
         fantasy_enabled: user.fantasy_enabled !== false
       })

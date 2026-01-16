@@ -794,8 +794,14 @@ exports.refreshToken = async (req, res) => {
         });
       }
       
-      // Verify stored refresh token matches
-      if (user.refresh_token !== refreshToken) {
+      // Verify stored refresh token matches using constant-time comparison
+      const crypto = require('crypto');
+      const storedToken = Buffer.from(user.refresh_token || '', 'utf8');
+      const providedToken = Buffer.from(refreshToken, 'utf8');
+      
+      // Only compare if both tokens have the same length to avoid timing attacks
+      if (storedToken.length !== providedToken.length || 
+          !crypto.timingSafeEqual(storedToken, providedToken)) {
         return res.status(401).json({
           success: false,
           message: 'Refresh token has been revoked. Please login again.'
