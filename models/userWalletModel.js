@@ -55,7 +55,7 @@ let userWalletSchema = new Schema({
   versionKey: false
 });
 
-// Unique index on userId
-userWalletSchema.index({ userId: 1 }, { unique: true });
+// Indexes will be created by the migration script (scripts/create-wallet-collections.js)
+// to avoid issues in production environments
 
 module.exports = mongoose.model('userwallets', userWalletSchema);

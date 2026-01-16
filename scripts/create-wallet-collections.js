@@ -194,12 +194,23 @@ async function createWalletCollections() {
     console.log('   - WalletTransaction model: require("./models/walletTransactionModel")');
     console.log('   - UserWallet model: require("./models/userWalletModel")');
     
-    await mongoose.connection.close();
-    console.log('\n✅ Database connection closed');
+    try {
+      await mongoose.connection.close();
+      console.log('\n✅ Database connection closed');
+    } catch (closeError) {
+      console.warn('⚠️  Warning: Could not close database connection:', closeError.message);
+    }
     process.exit(0);
   } catch (error) {
     console.error('❌ Error creating wallet collections:', error);
-    await mongoose.connection.close();
+    try {
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.connection.close();
+        console.log('✅ Database connection closed');
+      }
+    } catch (closeError) {
+      console.warn('⚠️  Warning: Could not close database connection:', closeError.message);
+    }
     process.exit(1);
   }
 }

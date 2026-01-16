@@ -30,7 +30,6 @@ let walletTransactionSchema = new Schema({
   },
   orderReference: {
     type: String,
-    sparse: true,
     description: 'Reference to Shop Order ID or Contest ID'
   },
   paymentMethod: {
@@ -70,10 +69,7 @@ let walletTransactionSchema = new Schema({
   versionKey: false
 });
 
-// Compound index for user transactions sorted by time
-walletTransactionSchema.index({ userId: 1, timestamp: -1 });
-walletTransactionSchema.index({ orderReference: 1 }, { sparse: true });
-walletTransactionSchema.index({ status: 1 });
-walletTransactionSchema.index({ type: 1 });
+// Indexes will be created by the migration script (scripts/create-wallet-collections.js)
+// to avoid issues in production environments
 
 module.exports = mongoose.model('wallettransactions', walletTransactionSchema);
