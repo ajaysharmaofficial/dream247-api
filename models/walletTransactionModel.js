@@ -1,139 +1,75 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-let Transaction = new Schema({
-    userid: {
-        type: mongoose.Types.ObjectId,
-        ref: 'user'
-    },
-    type: {
-        type: String,
-        default: ''
-    },
-    transaction_id: {
-        type: String
-    },
-    transaction_by: {
-        type: String,
-        default: process.env.APP_NAME
-    },
-    amount: {
-        type: Number,
-        default: 0
-    },
-    prize: {
-        type: String,
-        default: ""
-    },
-    paymentstatus: {
-        type: String,
-        default: 'confirmed'
-    },
-    contestdetail: {
-        type: String,
-        default: '0'
-    },
-    challengeid: {
-        type: mongoose.Types.ObjectId,
-        ref: 'matchchallenge', //MatchChallenge,
-        index: true,
-        default: null
-    },
-    seriesid: {
-        type: mongoose.Types.ObjectId,
-        ref: 'series' //Series
-    },
-    giftType: {
-        type: String,
-        default: ''
-    },
-    joinid: {
-        type: mongoose.Types.ObjectId,
-        ref: 'joinedleauge', //Joinedleauge,
-        index: true
-    },
-    bonus_amt: {
-        type: Number,
-        default: 0
-    },
-    win_amt: {
-        type: Number,
-        default: 0
-    },
-    addfund_amt: {
-        type: Number,
-        default: 0
-    },
-    bal_bonus_amt: {
-        type: Number,
-        default: 0
-    },
-    bal_win_amt: {
-        type: Number,
-        default: 0
-    },
-    bal_fund_amt: {
-        type: Number,
-        default: 0
-    },
-    extra_fund_amt: {
-        type: Number,
-        default: 0
-    },
-    total_available_amt: {
-        type: Number,
-        default: 0
-    },
-    challenge_join_amt: {
-        type: Number,
-        default: 0
-    },
-    withdraw_amt: {
-        type: Number,
-        default: 0
-    },
-    withdrawId: {
-        type: String
-    },
-    cons_bonus: {
-        type: Number,
-        default: 0
-    },
-    cons_win: {
-        type: Number,
-        default: 0
-    },
-    cons_amount: {
-        type: Number,
-        default: 0
-    },
-    rp_transaction_id: {
-        type: String,
-        default: "N/A"
-    },
-    coin: {
-        type: Number
-    },
-    is_deleted: {
-        type: Boolean,
-        default: false
-    },
-    referredUser: {
-        type: mongoose.Types.ObjectId,
-        ref: 'user',
-        index: true
-    },
-    tdsStatus: {
-        type: Number,
-        default: 0
-    },
-    tdsRefund: {
-        type: Number,
-        default: 0
-    }
-
+/**
+ * Wallet Transaction Schema
+ * Stores all wallet transactions for users across Shop and Fantasy modules
+ */
+let walletTransactionSchema = new Schema({
+  userId: {
+    type: String,
+    required: true,
+    index: true,
+    description: 'User ID from Hygraph or MongoDB'
+  },
+  type: {
+    type: String,
+    required: true,
+    enum: ['add_money', 'purchase', 'refund', 'admin_adjustment', 'withdrawal', 'bonus', 'contest_win'],
+    description: 'Transaction type'
+  },
+  amount: {
+    type: Number,
+    required: true,
+    description: 'Amount (positive for credit, negative for debit)'
+  },
+  description: {
+    type: String,
+    required: true,
+    description: 'Human-readable transaction description'
+  },
+  orderReference: {
+    type: String,
+    description: 'Reference to Shop Order ID or Contest ID'
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['razorpay', 'shopTokens', 'gameTokens', 'bank_transfer', 'admin', 'bonus', 'cashfree', 'phonepe'],
+    description: 'Payment method used'
+  },
+  module: {
+    type: String,
+    enum: ['shop', 'fantasy', 'wallet'],
+    default: 'wallet',
+    description: 'Which module initiated the transaction'
+  },
+  timestamp: {
+    type: Date,
+    default: Date.now,
+    required: true,
+    description: 'When transaction occurred'
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'completed', 'failed', 'reversed'],
+    default: 'pending',
+    required: true,
+    description: 'Transaction status'
+  },
+  balanceAfter: {
+    type: Number,
+    description: 'User balance after this transaction'
+  },
+  metadata: {
+    type: mongoose.Schema.Types.Mixed,
+    description: 'Additional JSON data (payment details, etc). Examples: {razorpay_payment_id, razorpay_order_id} for payment transactions, {contest_id, rank} for contest wins, {reason, admin_id} for admin adjustments'
+  }
 }, {
-    timestamps: true,
-    versionKey: false
-})
-module.exports = mongoose.model('wallettransactions', Transaction);
+  timestamps: true,
+  versionKey: false
+});
+
+// Indexes will be created by the migration script (scripts/create-wallet-collections.js)
+// to avoid issues in production environments
+
+module.exports = mongoose.model('wallettransactions', walletTransactionSchema);
