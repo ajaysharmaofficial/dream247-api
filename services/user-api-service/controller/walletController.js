@@ -207,6 +207,15 @@ exports.syncHygraphBalance = async (req, res) => {
     const userId = req.user._id || req.user.id;
     const { hygraphBalance } = req.body;
     
+    // Validate hygraphBalance
+    if (typeof hygraphBalance !== 'number' || hygraphBalance < 0) {
+      return res.status(400).json({
+        success: false,
+        status: false,
+        message: 'Invalid hygraphBalance: must be a non-negative number',
+      });
+    }
+    
     let wallet = await UserWallet.findOne({ userId: userId.toString() });
     
     if (!wallet) {
@@ -333,4 +342,3 @@ exports.getTransactionHistory = async (req, res) => {
   }
 };
 
-module.exports = exports;
