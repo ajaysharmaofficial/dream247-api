@@ -4,7 +4,9 @@
   "main": "api.js",
   "scripts": {
     "api-prod": "cross-env NODE_ENV=prod nodemon api.js",
-    "api-dev": "cross-env NODE_ENV=prod nodemon api.js"
+    "api-dev": "cross-env NODE_ENV=prod nodemon api.js",
+    "migrate:unified-auth": "node scripts/migrate-unified-auth.js",
+    "setup:wallet": "node scripts/create-wallet-collections.js"
   },
   "keywords": [],
   "author": "",
