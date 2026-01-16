@@ -23,6 +23,23 @@ const auth = async (req, res, next) => {
             throw new Error('Invalid token payload');
         }
 
+        // Check fantasy module access
+        if (!decoded.modules || !decoded.modules.includes('fantasy')) {
+            return res.status(403).json({ 
+                success: false, 
+                status: false, 
+                msg: 'Fantasy module not enabled for this account' 
+            });
+        }
+
+        if (decoded.fantasy_enabled === false) {
+            return res.status(403).json({ 
+                success: false, 
+                status: false, 
+                msg: 'Fantasy access disabled' 
+            });
+        }
+
         const userData = await redisUser.getUser(decoded._id);
         const platform = req.header('platform')?.toLowerCase();
 

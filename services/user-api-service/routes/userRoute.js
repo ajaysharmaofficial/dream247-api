@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controller/userController.js');
 const auth = require("../../../middlewares/apiauth.js");
+const internalAuth = require("../../../middlewares/internalAuth.js");
 const upload = require("../../../utils/multerS3.js");
 
 router.use((req, res, next) => {
@@ -57,5 +58,9 @@ router.get("/user-detailed-transactions", auth, userController.usersDetailedTran
 router.get("/update-all-user-balance", userController.updateAllUserBalnace);
 
 router.get("/maintenance-check", auth, userController.MaintenanceCheck);
+
+// Internal API routes
+router.post("/internal/sync-user", internalAuth, userController.syncUserFromShop);
+router.post("/internal/logout", internalAuth, userController.internalLogout);
 
 module.exports = router;

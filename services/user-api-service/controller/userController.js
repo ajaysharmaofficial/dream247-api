@@ -620,3 +620,49 @@ exports.verifyPhoneAndGetToken = async (req, res) => {
     }
 }
 
+exports.syncUserFromShop = async (req, res) => {
+  try {
+    const data = await userService.syncUserFromShop(req);
+    if (data && data.status) {
+      return res.status(200).json({
+        success: true,
+        message: data.message,
+        user_id: data.user_id,
+      });
+    } else {
+      return res.status(200).json({
+        success: false,
+        message: data.message,
+      });
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "User sync failed",
+    });
+  }
+};
+
+exports.internalLogout = async (req, res) => {
+  try {
+    const data = await userService.internalLogout(req);
+    if (data && data.status) {
+      return res.status(200).json({
+        success: true,
+        message: data.message,
+      });
+    } else {
+      return res.status(200).json({
+        success: false,
+        message: data.message,
+      });
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal logout failed",
+    });
+  }
+};
