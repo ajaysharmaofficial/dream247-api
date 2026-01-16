@@ -58,4 +58,4 @@ let userWalletSchema = new Schema({
 // Unique index on userId
 userWalletSchema.index({ userId: 1 }, { unique: true });
 
-module.exports = mongoose.model('UserWallet', userWalletSchema);
+module.exports = mongoose.model('userwallets', userWalletSchema);

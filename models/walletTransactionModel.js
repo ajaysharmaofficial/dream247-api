@@ -76,4 +76,4 @@ walletTransactionSchema.index({ orderReference: 1 }, { sparse: true });
 walletTransactionSchema.index({ status: 1 });
 walletTransactionSchema.index({ type: 1 });
 
-module.exports = mongoose.model('WalletTransaction', walletTransactionSchema);
+module.exports = mongoose.model('wallettransactions', walletTransactionSchema);

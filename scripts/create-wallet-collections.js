@@ -8,6 +8,10 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
+// Collection names constants
+const WALLET_TRANSACTIONS_COLLECTION = 'wallettransactions';
+const USER_WALLETS_COLLECTION = 'userwallets';
+
 async function createWalletCollections() {
   try {
     // Connect to MongoDB
@@ -29,10 +33,10 @@ async function createWalletCollections() {
     const collectionNames = collections.map(c => c.name);
 
     // Create wallet_transactions collection
-    if (!collectionNames.includes('wallettransactions')) {
+    if (!collectionNames.includes(WALLET_TRANSACTIONS_COLLECTION)) {
       console.log('📝 Creating wallet_transactions collection...');
       
-      await db.createCollection('wallettransactions', {
+      await db.createCollection(WALLET_TRANSACTIONS_COLLECTION, {
         validator: {
           $jsonSchema: {
             bsonType: 'object',
@@ -100,21 +104,21 @@ async function createWalletCollections() {
 
       // Create indexes
       console.log('📊 Creating indexes for wallet_transactions...');
-      await db.collection('wallettransactions').createIndex({ userId: 1 });
-      await db.collection('wallettransactions').createIndex({ userId: 1, timestamp: -1 });
-      await db.collection('wallettransactions').createIndex({ orderReference: 1 }, { sparse: true });
-      await db.collection('wallettransactions').createIndex({ status: 1 });
-      await db.collection('wallettransactions').createIndex({ type: 1 });
+      await db.collection(WALLET_TRANSACTIONS_COLLECTION).createIndex({ userId: 1 });
+      await db.collection(WALLET_TRANSACTIONS_COLLECTION).createIndex({ userId: 1, timestamp: -1 });
+      await db.collection(WALLET_TRANSACTIONS_COLLECTION).createIndex({ orderReference: 1 }, { sparse: true });
+      await db.collection(WALLET_TRANSACTIONS_COLLECTION).createIndex({ status: 1 });
+      await db.collection(WALLET_TRANSACTIONS_COLLECTION).createIndex({ type: 1 });
       console.log('✅ Indexes created for wallet_transactions\n');
     } else {
       console.log('ℹ️  wallet_transactions collection already exists\n');
     }
 
     // Create user_wallets collection
-    if (!collectionNames.includes('userwallets')) {
+    if (!collectionNames.includes(USER_WALLETS_COLLECTION)) {
       console.log('📝 Creating user_wallets collection...');
       
-      await db.createCollection('userwallets', {
+      await db.createCollection(USER_WALLETS_COLLECTION, {
         validator: {
           $jsonSchema: {
             bsonType: 'object',
@@ -167,7 +171,7 @@ async function createWalletCollections() {
 
       // Create unique index on userId
       console.log('📊 Creating unique index for user_wallets...');
-      await db.collection('userwallets').createIndex({ userId: 1 }, { unique: true });
+      await db.collection(USER_WALLETS_COLLECTION).createIndex({ userId: 1 }, { unique: true });
       console.log('✅ Unique index created for user_wallets\n');
     } else {
       console.log('ℹ️  user_wallets collection already exists\n');
@@ -177,7 +181,7 @@ async function createWalletCollections() {
     console.log('🔍 Verifying collections...');
     const finalCollections = await db.listCollections().toArray();
     const walletCollections = finalCollections.filter(c => 
-      c.name === 'wallettransactions' || c.name === 'userwallets'
+      c.name === WALLET_TRANSACTIONS_COLLECTION || c.name === USER_WALLETS_COLLECTION
     );
 
     console.log('\n✅ Wallet collections verified:');
@@ -190,9 +194,12 @@ async function createWalletCollections() {
     console.log('   - WalletTransaction model: require("./models/walletTransactionModel")');
     console.log('   - UserWallet model: require("./models/userWalletModel")');
     
+    await mongoose.connection.close();
+    console.log('\n✅ Database connection closed');
     process.exit(0);
   } catch (error) {
     console.error('❌ Error creating wallet collections:', error);
+    await mongoose.connection.close();
     process.exit(1);
   }
 }
