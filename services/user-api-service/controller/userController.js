@@ -679,10 +679,11 @@ exports.validateToken = async (req, res) => {
       });
     }
     
-    const jwt = require('jsonwebtoken');
-    
     try {
-      const decoded = jwt.verify(token, global.constant.SECRET_TOKEN);
+      // Use jose library for consistency with token generation
+      const { jwtVerify } = await import('jose');
+      const secret = Buffer.from(global.constant.SECRET_TOKEN);
+      const { payload: decoded } = await jwtVerify(token, secret);
       
       // Check fantasy module access
       if (!decoded.modules || !decoded.modules.includes('fantasy')) {
@@ -763,10 +764,11 @@ exports.refreshToken = async (req, res) => {
       });
     }
     
-    const jwt = require('jsonwebtoken');
-    
     try {
-      const decoded = jwt.verify(refreshToken, global.constant.SECRET_TOKEN);
+      // Use jose library for consistency with token generation
+      const { jwtVerify } = await import('jose');
+      const secret = Buffer.from(global.constant.SECRET_TOKEN);
+      const { payload: decoded } = await jwtVerify(refreshToken, secret);
       
       // Ensure it's a refresh token
       if (decoded.type !== 'refresh') {
@@ -803,7 +805,6 @@ exports.refreshToken = async (req, res) => {
       
       // Generate new access token
       const { SignJWT } = await import('jose');
-      const secret = Buffer.from(global.constant.SECRET_TOKEN);
       
       const newAccessToken = await new SignJWT({
         _id: user._id.toString(),
@@ -824,7 +825,7 @@ exports.refreshToken = async (req, res) => {
       });
       
       // Clear Redis cache for user to refresh data
-      await redisUser.clearUser(user._id.toString());
+      await redisUser.deletedata(`user:${user._id.toString()}`);
       
       res.json({
         success: true,
