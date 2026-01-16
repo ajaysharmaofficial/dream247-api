@@ -666,3 +666,196 @@ exports.internalLogout = async (req, res) => {
     });
   }
 };
+
+exports.validateToken = async (req, res) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        valid: false,
+        message: 'Token is required'
+      });
+    }
+    
+    try {
+      // Use jose library for consistency with token generation
+      const { jwtVerify } = await import('jose');
+      const secret = Buffer.from(global.constant.SECRET_TOKEN);
+      const { payload: decoded } = await jwtVerify(token, secret);
+      
+      // Check fantasy module access
+      if (!decoded.modules || !decoded.modules.includes('fantasy')) {
+        return res.json({
+          success: true,
+          valid: false,
+          message: 'Fantasy module not enabled for this account'
+        });
+      }
+      
+      if (decoded.fantasy_enabled === false) {
+        return res.json({
+          success: true,
+          valid: false,
+          message: 'Fantasy access disabled'
+        });
+      }
+      
+      // Get user from MongoDB
+      const user = await userModel.findById(decoded._id);
+      
+      if (!user) {
+        return res.json({
+          success: true,
+          valid: false,
+          message: 'User not found'
+        });
+      }
+      
+      if (user.status === 'blocked') {
+        return res.json({
+          success: true,
+          valid: false,
+          message: 'User is blocked'
+        });
+      }
+      
+      // Token is valid
+      return res.json({
+        success: true,
+        valid: true,
+        message: 'Token is valid',
+        user: {
+          id: user._id,
+          mobile: user.mobile,
+          modules: decoded.modules || ['shop', 'fantasy'],
+          fantasy_enabled: decoded.fantasy_enabled !== false,
+          shop_enabled: decoded.shop_enabled !== false,
+          expiresAt: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : null
+        }
+      });
+    } catch (jwtError) {
+      console.error('JWT Validation Error:', jwtError.message);
+      return res.json({
+        success: true,
+        valid: false,
+        message: 'Invalid or expired token'
+      });
+    }
+  } catch (error) {
+    console.error('Error in validate-token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+exports.refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Refresh token is required'
+      });
+    }
+    
+    try {
+      // Use jose library for consistency with token generation
+      const { jwtVerify } = await import('jose');
+      const secret = Buffer.from(global.constant.SECRET_TOKEN);
+      const { payload: decoded } = await jwtVerify(refreshToken, secret);
+      
+      // Ensure it's a refresh token
+      if (decoded.type !== 'refresh') {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid refresh token type'
+        });
+      }
+      
+      // Get user from MongoDB
+      const user = await userModel.findById(decoded.userId);
+      
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+      
+      if (user.status === 'blocked') {
+        return res.status(401).json({
+          success: false,
+          message: 'User is blocked'
+        });
+      }
+      
+      // Verify stored refresh token matches using constant-time comparison
+      const crypto = require('crypto');
+      const storedToken = Buffer.from(user.refresh_token || '', 'utf8');
+      const providedToken = Buffer.from(refreshToken, 'utf8');
+      
+      // Only compare if both tokens have the same length to avoid timing attacks
+      if (storedToken.length !== providedToken.length || 
+          !crypto.timingSafeEqual(storedToken, providedToken)) {
+        return res.status(401).json({
+          success: false,
+          message: 'Refresh token has been revoked. Please login again.'
+        });
+      }
+      
+      // Generate new access token
+      const { SignJWT } = await import('jose');
+      
+      const newAccessToken = await new SignJWT({
+        _id: user._id.toString(),
+        userId: user._id.toString(),
+        mobile: user.mobile,
+        modules: user.modules || ['shop', 'fantasy'],
+        shop_enabled: user.shop_enabled !== false,
+        fantasy_enabled: user.fantasy_enabled !== false
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setExpirationTime('15m')  // 15 minutes
+        .setIssuedAt()
+        .sign(secret);
+      
+      // Update user's access token in MongoDB
+      await userModel.findByIdAndUpdate(user._id, {
+        auth_key: newAccessToken
+      });
+      
+      // Clear Redis cache for user to refresh data
+      await redisUser.deletedata(`user:${user._id.toString()}`);
+      
+      res.json({
+        success: true,
+        message: 'Token refreshed successfully',
+        token: newAccessToken,
+        user: {
+          id: user._id,
+          mobile: user.mobile,
+          modules: user.modules || ['shop', 'fantasy'],
+          fantasy_enabled: user.fantasy_enabled !== false,
+          shop_enabled: user.shop_enabled !== false
+        }
+      });
+    } catch (jwtError) {
+      console.error('Refresh Token Error:', jwtError.message);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired refresh token. Please login again.'
+      });
+    }
+  } catch (error) {
+    console.error('Error in refresh-token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};

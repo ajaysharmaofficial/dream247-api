@@ -59,6 +59,10 @@ router.get("/update-all-user-balance", userController.updateAllUserBalnace);
 
 router.get("/maintenance-check", auth, userController.MaintenanceCheck);
 
+// Token management routes
+router.post("/validate-token", userController.validateToken);
+router.post("/refresh-token", userController.refreshToken);
+
 // Internal API routes
 router.post("/internal/sync-user", internalAuth, userController.syncUserFromShop);
 router.post("/internal/logout", internalAuth, userController.internalLogout);

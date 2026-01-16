@@ -857,6 +857,7 @@ exports.verifyOtp = async (req) => {
     let user = {};
     let data = {};
     let token = null;
+    let refreshToken = null;
     if (req.body.tempUser) {
       // const findTempUser = await tempuserModel.find({
       //   _id: req.body.tempUser,
@@ -901,7 +902,9 @@ exports.verifyOtp = async (req) => {
         const getNewbalance = mobileBonus + signupReward;
         const { SignJWT } = await import("jose"); // Dynamic import
         const secret = Buffer.from(global.constant.SECRET_TOKEN);
-        token = await new SignJWT({ 
+        
+        // Generate short-lived access token (15 minutes)
+        const accessToken = await new SignJWT({ 
           _id: newUserId.toString(),
           userId: newUserId.toString(),
           mobile: req.body.mobile,
@@ -910,8 +913,22 @@ exports.verifyOtp = async (req) => {
           fantasy_enabled: true
         })
           .setProtectedHeader({ alg: "HS256" })
-          .setIssuedAt() // Only sets the issued time, no expiration
+          .setExpirationTime('15m')  // Short-lived for security
+          .setIssuedAt()
           .sign(secret);
+        
+        // Generate long-lived refresh token (30 days)
+        refreshToken = await new SignJWT({
+          userId: newUserId.toString(),
+          type: 'refresh',
+          mobile: req.body.mobile
+        })
+          .setProtectedHeader({ alg: "HS256" })
+          .setExpirationTime('30d')  // Long-lived
+          .setIssuedAt()
+          .sign(secret);
+        
+        token = accessToken;
         data["_id"] = newUserId.toString();
         data["mobile"] = req.body.mobile;
         data["shop_enabled"] = true;
@@ -920,7 +937,8 @@ exports.verifyOtp = async (req) => {
         data["refer_code"] = getReferCode;
         data["refer_id"] = tempUser.refer_id;
         data["team"] = team;
-        data["auth_key"] = token;
+        data["auth_key"] = accessToken;
+        data["refresh_token"] = refreshToken;
         data["user_verify"] = { mobile_verify: 1, signupbonus: 1 };
         data["userbalance"] = {
           bonus: Number(getNewbalance),
@@ -1019,21 +1037,39 @@ exports.verifyOtp = async (req) => {
 
       const { SignJWT } = await import("jose"); // Dynamic import
       const secret = Buffer.from(global.constant.SECRET_TOKEN);
-      token = await new SignJWT({ 
+      
+      // Generate short-lived access token (15 minutes)
+      const accessToken = await new SignJWT({ 
         _id: user._id.toString(),
         userId: user._id.toString(),
         mobile: user.mobile,
         modules: user.modules || ['shop', 'fantasy'],
-        shop_enabled: user.shop_enabled !== undefined ? user.shop_enabled : true,
-        fantasy_enabled: user.fantasy_enabled !== undefined ? user.fantasy_enabled : true
+        // Use !== false to treat undefined/null as enabled (defaults to true in schema)
+        shop_enabled: user.shop_enabled !== false,
+        fantasy_enabled: user.fantasy_enabled !== false
       })
         .setProtectedHeader({ alg: "HS256" })
-        .setIssuedAt() // Only sets the issued time, no expiration
+        .setExpirationTime('15m')  // Short-lived for security
+        .setIssuedAt()
         .sign(secret);
-
-      data["auth_key"] = token;
+      
+      // Generate long-lived refresh token (30 days)
+      refreshToken = await new SignJWT({
+        userId: user._id.toString(),
+        type: 'refresh',
+        mobile: user.mobile
+      })
+        .setProtectedHeader({ alg: "HS256" })
+        .setExpirationTime('30d')  // Long-lived
+        .setIssuedAt()
+        .sign(secret);
+      
+      token = accessToken;
+      data["auth_key"] = accessToken;
+      data["refresh_token"] = refreshToken;
       data["app_key"] = req.body.appid || "";
-      user.auth_key = token;
+      user.auth_key = accessToken;
+      user.refresh_token = refreshToken;
       await redisUser.setUser(user);
       const msg = {
         filter: { _id: user._id },
@@ -1050,6 +1086,7 @@ exports.verifyOtp = async (req) => {
       data: {
         token: token,
         auth_key: token,
+        refresh_token: refreshToken,
       },
     };
   } catch (error) {
@@ -3981,8 +4018,8 @@ exports.internalLogout = async (req) => {
     // Clear Redis cache
     await redisUser.deletedata(`user:${user_id}`);
     
-    // Update user's auth_key to invalidate token
-    await userModel.updateOne({ _id: user_id }, { auth_key: null });
+    // Update user's auth_key and refresh_token to invalidate both tokens
+    await userModel.updateOne({ _id: user_id }, { auth_key: null, refresh_token: '' });
     
     return { status: true, message: 'User logged out successfully' };
   } catch (error) {

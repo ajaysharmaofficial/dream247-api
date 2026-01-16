@@ -323,6 +323,10 @@ let userSchema = new Schema({
         type: String,
         default: ''
     },
+    refresh_token: {
+        type: String,
+        default: ''
+    },
     app_key: {
         type: String,
         default: ''
