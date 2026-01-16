@@ -740,8 +740,7 @@ exports.validateToken = async (req, res) => {
       return res.json({
         success: true,
         valid: false,
-        message: 'Invalid or expired token',
-        error: jwtError.message
+        message: 'Invalid or expired token'
       });
     }
   } catch (error) {
@@ -843,8 +842,7 @@ exports.refreshToken = async (req, res) => {
       console.error('Refresh Token Error:', jwtError.message);
       return res.status(401).json({
         success: false,
-        message: 'Invalid or expired refresh token. Please login again.',
-        error: jwtError.message
+        message: 'Invalid or expired refresh token. Please login again.'
       });
     }
   } catch (error) {
