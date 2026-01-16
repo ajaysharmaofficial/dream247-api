@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controller/userController.js');
+const walletController = require('../controller/walletController.js');
 const auth = require("../../../middlewares/apiauth.js");
 const internalAuth = require("../../../middlewares/internalAuth.js");
 const upload = require("../../../utils/multerS3.js");
@@ -66,5 +67,12 @@ router.post("/refresh-token", userController.refreshToken);
 // Internal API routes
 router.post("/internal/sync-user", internalAuth, userController.syncUserFromShop);
 router.post("/internal/logout", internalAuth, userController.internalLogout);
+
+// Unified Wallet Routes
+router.get('/wallet/balance', auth, walletController.getWalletBalance);
+router.post('/wallet/add-shop-tokens', auth, walletController.addShopTokens);
+router.post('/wallet/deduct-shop-tokens', auth, walletController.deductShopTokens);
+router.post('/wallet/sync-hygraph', auth, walletController.syncHygraphBalance);
+router.get('/wallet/transactions', auth, walletController.getTransactionHistory);
 
 module.exports = router;
