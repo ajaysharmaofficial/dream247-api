@@ -62,7 +62,7 @@ let walletTransactionSchema = new Schema({
   },
   metadata: {
     type: mongoose.Schema.Types.Mixed,
-    description: 'Additional JSON data (payment details, etc)'
+    description: 'Additional JSON data (payment details, etc). Examples: {razorpay_payment_id, razorpay_order_id} for payment transactions, {contest_id, rank} for contest wins, {reason, admin_id} for admin adjustments'
   }
 }, {
   timestamps: true,
