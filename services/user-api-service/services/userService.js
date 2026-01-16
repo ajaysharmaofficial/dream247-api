@@ -901,12 +901,22 @@ exports.verifyOtp = async (req) => {
         const getNewbalance = mobileBonus + signupReward;
         const { SignJWT } = await import("jose"); // Dynamic import
         const secret = Buffer.from(global.constant.SECRET_TOKEN);
-        token = await new SignJWT({ _id: newUserId.toString() })
+        token = await new SignJWT({ 
+          _id: newUserId.toString(),
+          userId: newUserId.toString(),
+          mobile: req.body.mobile,
+          modules: ['shop', 'fantasy'],
+          shop_enabled: true,
+          fantasy_enabled: true
+        })
           .setProtectedHeader({ alg: "HS256" })
           .setIssuedAt() // Only sets the issued time, no expiration
           .sign(secret);
         data["_id"] = newUserId.toString();
         data["mobile"] = req.body.mobile;
+        data["shop_enabled"] = true;
+        data["fantasy_enabled"] = true;
+        data["modules"] = ['shop', 'fantasy'];
         data["refer_code"] = getReferCode;
         data["refer_id"] = tempUser.refer_id;
         data["team"] = team;
@@ -1009,7 +1019,14 @@ exports.verifyOtp = async (req) => {
 
       const { SignJWT } = await import("jose"); // Dynamic import
       const secret = Buffer.from(global.constant.SECRET_TOKEN);
-      token = await new SignJWT({ _id: user._id.toString() })
+      token = await new SignJWT({ 
+        _id: user._id.toString(),
+        userId: user._id.toString(),
+        mobile: user.mobile,
+        modules: user.modules || ['shop', 'fantasy'],
+        shop_enabled: user.shop_enabled !== undefined ? user.shop_enabled : true,
+        fantasy_enabled: user.fantasy_enabled !== undefined ? user.fantasy_enabled : true
+      })
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt() // Only sets the issued time, no expiration
         .sign(secret);
@@ -3860,7 +3877,14 @@ exports.verifyPhoneAndGetToken = async (req) => {
 
     const { SignJWT } = await import("jose");
     const secret = Buffer.from(global.constant.SECRET_TOKEN);
-    const token = await new SignJWT({ _id: user._id.toString() })
+    const token = await new SignJWT({ 
+      _id: user._id.toString(),
+      userId: user._id.toString(),
+      mobile: user.mobile,
+      modules: user.modules || ['shop', 'fantasy'],
+      shop_enabled: user.shop_enabled !== undefined ? user.shop_enabled : true,
+      fantasy_enabled: user.fantasy_enabled !== undefined ? user.fantasy_enabled : true
+    })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .sign(secret);
@@ -3892,5 +3916,77 @@ exports.verifyPhoneAndGetToken = async (req) => {
       message: "Something went wrong. Please try again after some time.",
       data: {},
     };
+  }
+};
+
+exports.syncUserFromShop = async (req) => {
+  const { mobile, hygraph_user_id, shop_enabled, fantasy_enabled } = req.body;
+  
+  try {
+    let user = await userModel.findOne({ mobile });
+    
+    if (!user) {
+      const referCode = await genrateReferCode(mobile);
+      const teamName = await generateTeamName(mobile);
+      
+      user = await userModel.create({
+        mobile,
+        hygraph_user_id,
+        shop_enabled: shop_enabled !== undefined ? shop_enabled : true,
+        fantasy_enabled: fantasy_enabled !== undefined ? fantasy_enabled : true,
+        modules: ['shop', 'fantasy'],
+        refer_code: referCode,
+        team: teamName,
+        status: 'activated',
+        user_verify: {
+          mobile_verify: 1
+        },
+        userbalance: {
+          balance: 0,
+          winning: 0,
+          bonus: 0
+        }
+      });
+    } else {
+      await userModel.updateOne(
+        { mobile },
+        { 
+          hygraph_user_id: hygraph_user_id || user.hygraph_user_id,
+          shop_enabled: shop_enabled !== undefined ? shop_enabled : user.shop_enabled,
+          fantasy_enabled: fantasy_enabled !== undefined ? fantasy_enabled : user.fantasy_enabled,
+          modules: user.modules || ['shop', 'fantasy']
+        }
+      );
+      user = await userModel.findOne({ mobile });
+    }
+    
+    // Update Redis cache
+    await redisUser.setUser(user);
+    
+    return { 
+      status: true, 
+      message: 'User synced successfully', 
+      user_id: user._id 
+    };
+  } catch (error) {
+    console.error('Sync user error:', error);
+    return { status: false, message: 'User sync failed' };
+  }
+};
+
+exports.internalLogout = async (req) => {
+  const { user_id, token } = req.body;
+  
+  try {
+    // Clear Redis cache
+    await redisUser.deletedata(`user:${user_id}`);
+    
+    // Update user's auth_key to invalidate token
+    await userModel.updateOne({ _id: user_id }, { auth_key: null });
+    
+    return { status: true, message: 'User logged out successfully' };
+  } catch (error) {
+    console.error('Internal logout error:', error);
+    return { status: false, message: 'Logout failed' };
   }
 };

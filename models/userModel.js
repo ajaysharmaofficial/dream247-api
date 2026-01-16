@@ -511,6 +511,22 @@ let userSchema = new Schema({
     checkStatus: {
         type: Boolean,
         default: false
+    },
+    shop_enabled: {
+        type: Boolean,
+        default: true
+    },
+    fantasy_enabled: {
+        type: Boolean,
+        default: true
+    },
+    modules: {
+        type: [String],
+        default: ['shop', 'fantasy']
+    },
+    hygraph_user_id: {
+        type: String,
+        default: ''
     }
 }, {
     timestamps: true,
