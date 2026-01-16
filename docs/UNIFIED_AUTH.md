@@ -244,6 +244,95 @@ curl -X POST https://fantasy-api.yourdomain.com/api/user/internal/logout \
   }'
 ```
 
+## Token Management Endpoints
+
+### Token Validation
+
+**Endpoint:** `POST /api/user/validate-token`
+
+Validate JWT token and check its status.
+
+**Request:**
+```json
+{
+  "token": "jwt-token-here"
+}
+```
+
+**Response (Valid):**
+```json
+{
+  "success": true,
+  "valid": true,
+  "message": "Token is valid",
+  "user": {
+    "id": "user-mongodb-id",
+    "mobile": 9876543210,
+    "modules": ["shop", "fantasy"],
+    "fantasy_enabled": true,
+    "shop_enabled": true,
+    "expiresAt": "2024-12-31T23:59:59.000Z"
+  }
+}
+```
+
+**Response (Invalid):**
+```json
+{
+  "success": true,
+  "valid": false,
+  "message": "Invalid or expired token"
+}
+```
+
+### Token Refresh
+
+**Endpoint:** `POST /api/user/refresh-token`
+
+Generate new access token using refresh token.
+
+**Request:**
+```json
+{
+  "refreshToken": "refresh-token-here"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Token refreshed successfully",
+  "token": "new-access-token-here",
+  "user": {
+    "id": "user-id",
+    "mobile": 9876543210,
+    "modules": ["shop", "fantasy"],
+    "fantasy_enabled": true,
+    "shop_enabled": true
+  }
+}
+```
+
+## Token Lifecycle
+
+1. **Login/Signup:** User receives:
+   - Access token (15 minutes expiry)
+   - Refresh token (30 days expiry)
+2. **API Calls:** Use access token in Authorization header
+3. **Token Expiry:** After 15 minutes, access token expires
+4. **Refresh:** Call `/api/user/refresh-token` with refresh token to get new access token
+5. **Logout:** Both tokens are invalidated
+6. **Refresh Token Expiry:** After 30 days, user must re-login
+
+## Security Improvements
+
+- **Short-lived access tokens:** Reduces risk if token is compromised (15 minutes)
+- **Long-lived refresh tokens:** Better UX, no forced re-login every 15 minutes (30 days)
+- **Token validation endpoint:** Frontend can verify token health
+- **Revocation support:** Refresh tokens can be invalidated on logout
+- **Token expiration:** All new tokens have expiration times for better security
+
 ## Support
 
 For issues or questions, contact the development team.
