@@ -16,15 +16,7 @@ router.get("/db-health-check", userController.dbCheck);
 // ONBOARDING APIS
 router.get("/get-version", userController.getVersion);
 
-router.post("/add-temporary-user", userController.addTempUser);
-
-router.post("/verify-otp", userController.verifyOtp);
-
-router.post("/verify-phone-and-get-token", userController.verifyPhoneAndGetToken);
-
 router.post("/logout-user", auth, userController.logout);
-
-router.post("/otp-resend", userController.otpResend);
 
 router.get("/user-complete-details", auth, userController.userCompleteDetails);
 
@@ -63,6 +55,9 @@ router.get("/maintenance-check", auth, userController.MaintenanceCheck);
 // Token management routes
 router.post("/validate-token", userController.validateToken);
 router.post("/refresh-token", userController.refreshToken);
+
+// Shop-based auth (OTP verified by shop)
+router.post("/login", userController.shopVerifiedLogin);
 
 // Internal API routes
 router.post("/internal/sync-user", internalAuth, userController.syncUserFromShop);

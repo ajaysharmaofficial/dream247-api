@@ -311,6 +311,10 @@ let userSchema = new Schema({
         type: Number,
         default: 0
     },
+    mobile_number: {
+        type: String,
+        default: ''
+    },
     password: {
         type: String,
         default: ''
@@ -346,6 +350,14 @@ let userSchema = new Schema({
     refer_id: {
         type: mongoose.Types.ObjectId,
         ref: 'user',
+    },
+    first_name: {
+        type: String,
+        default: ''
+    },
+    last_name: {
+        type: String,
+        default: ''
     },
     name: {
         type: String
@@ -446,6 +458,22 @@ let userSchema = new Schema({
         type: Number,
         default: 0
     },
+    shopTokens: {
+        type: Number,
+        default: 0
+    },
+    totalSpentTokens: {
+        type: Number,
+        default: 0
+    },
+    wallet_balance: {
+        type: Number,
+        default: 0
+    },
+    fantasy_user_id: {
+        type: String,
+        default: ''
+    },
     teamNameUpdateStatus: {
         type: Boolean,
         default: false
@@ -530,10 +558,19 @@ let userSchema = new Schema({
     },
     hygraph_user_id: {
         type: String,
-        default: ''
+        default: '',
+        unique: true,
+        sparse: true
     }
 }, {
     timestamps: true,
     versionKey: false
 })
+
+// Create unique index on hygraph_user_id for users coming from shop
+userSchema.index({ hygraph_user_id: 1 }, { unique: true, sparse: true });
+
+// Create index on mobile for faster lookups
+userSchema.index({ mobile: 1 });
+
 module.exports = mongoose.model('user', userSchema);

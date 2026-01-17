@@ -45,6 +45,10 @@ exports.getVersion = async (req, res) => {
     }
 }
 
+/**
+ * @deprecated - OTP verification is now handled by Shop backend
+ * Fantasy app receives verified users via /internal/sync-user or /login endpoints
+ */
 exports.addTempUser = async (req, res) => {
     try {
         const data = await userService.addTempUser(req);
@@ -96,7 +100,10 @@ exports.verifyOtp = async (req, res) => {
         });
     }
 }
-
+/**
+ * @deprecated - OTP verification is now handled by Shop backend
+ * Use /login endpoint after user is synced via /internal/sync-user
+ */
 exports.logout = async (req, res) => {
     try {
         const data = await userService.logout(req);
@@ -123,6 +130,10 @@ exports.logout = async (req, res) => {
     }
 }
 
+/**
+ * @deprecated - OTP verification is now handled by Shop backend
+ * OTP resend is no longer needed in Fantasy app
+ */
 exports.otpResend = async (req, res) => {
     try {
         const data = await userService.otpResend(req);
@@ -594,6 +605,10 @@ exports.MaintenanceCheck = async (req, res) => {
     }
 }
 
+/**
+ * @deprecated - OTP verification is now handled by Shop backend
+ * Use /login endpoint after user is synced via /internal/sync-user
+ */
 exports.verifyPhoneAndGetToken = async (req, res) => {
     try {
         const data = await userService.verifyPhoneAndGetToken(req);
@@ -640,6 +655,33 @@ exports.syncUserFromShop = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "User sync failed",
+    });
+  }
+};
+
+exports.shopVerifiedLogin = async (req, res) => {
+  try {
+    const data = await userService.shopVerifiedLogin(req);
+    if (data && data.status) {
+      return res.status(200).json({
+        success: true,
+        message: data.message,
+        user_id: data.user_id,
+        auth_key: data.auth_key,
+        refresh_token: data.refresh_token,
+        user: data.user
+      });
+    } else {
+      return res.status(200).json({
+        success: false,
+        message: data.message,
+      });
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Login failed",
     });
   }
 };

@@ -566,6 +566,10 @@ async function sendOtpthroughF2s(mobile, otp) {
   }
 }
 
+/**
+ * @deprecated - OTP verification is now handled by Shop backend
+ * Fantasy app receives verified users via /internal/sync-user or /login endpoints
+ */
 exports.addTempUser = async (req) => {
   try {
     const { mobile: reqMobile, refercode } = req.body;
@@ -851,6 +855,10 @@ exports.loginUser = async (req, user) => {
 //   }
 // }
 
+/**
+ * @deprecated - OTP verification is now handled by Shop backend
+ * Use /login endpoint after user is synced via /internal/sync-user
+ */
 exports.verifyOtp = async (req) => {
   try {
     // console.log("-----req.body----", req.body)
@@ -1129,6 +1137,10 @@ exports.logout = async (req) => {
   }
 };
 
+/**
+ * @deprecated - OTP verification is now handled by Shop backend
+ * OTP resend is no longer needed in Fantasy app
+ */
 exports.otpResend = async (req) => {
   try {
     const { tempuser, mobile, username } = req.body;
@@ -3827,6 +3839,10 @@ exports.MaintenanceCheck = async (req) => {
   }
 };
 
+/**
+ * @deprecated - OTP verification is now handled by Shop backend
+ * Use /login endpoint after user is synced via /internal/sync-user
+ */
 exports.verifyPhoneAndGetToken = async (req) => {
   try {
     const { phoneNumber } = req.body;
@@ -3957,44 +3973,107 @@ exports.verifyPhoneAndGetToken = async (req) => {
 };
 
 exports.syncUserFromShop = async (req) => {
-  const { mobile, hygraph_user_id, shop_enabled, fantasy_enabled } = req.body;
+  const { 
+    mobile_number, 
+    hygraph_user_id, 
+    first_name,
+    last_name,
+    username, 
+    name, 
+    shopTokens,
+    totalSpentTokens,
+    wallet_balance,
+    shop_enabled, 
+    fantasy_enabled 
+  } = req.body;
   
   try {
-    let user = await userModel.findOne({ mobile });
+    // Validate required fields
+    if (!mobile_number || !hygraph_user_id) {
+      return { 
+        status: false, 
+        message: 'mobile_number and hygraph_user_id are required' 
+      };
+    }
+
+    // Find user by hygraph_user_id first (primary lookup)
+    let user = await userModel.findOne({ hygraph_user_id });
+    
+    // Fallback to mobile_number lookup
+    if (!user) {
+      user = await userModel.findOne({ mobile_number });
+    }
     
     if (!user) {
-      const referCode = await genrateReferCode(mobile);
-      const teamName = await generateTeamName(mobile);
+      // Create new user
+      const referCode = await genrateReferCode(mobile_number);
+      const teamName = await generateTeamName(mobile_number);
       
       user = await userModel.create({
-        mobile,
+        mobile_number,
+        mobile: parseInt(mobile_number) || 0,
         hygraph_user_id,
+        first_name: first_name || '',
+        last_name: last_name || '',
+        name: name || `${first_name || ''} ${last_name || ''}`.trim(),
+        username: username || '',
         shop_enabled: shop_enabled !== undefined ? shop_enabled : true,
         fantasy_enabled: fantasy_enabled !== undefined ? fantasy_enabled : true,
         modules: ['shop', 'fantasy'],
         refer_code: referCode,
         team: teamName,
         status: 'activated',
+        shopTokens: shopTokens || 0,
+        totalSpentTokens: totalSpentTokens || 0,
+        wallet_balance: wallet_balance || 0,
         user_verify: {
           mobile_verify: 1
         },
         userbalance: {
-          balance: 0,
+          balance: wallet_balance || 0,
           winning: 0,
           bonus: 0
         }
       });
     } else {
+      // Update existing user with shop data
+      const updateData = {
+        hygraph_user_id: hygraph_user_id || user.hygraph_user_id,
+        shop_enabled: shop_enabled !== undefined ? shop_enabled : user.shop_enabled,
+        fantasy_enabled: fantasy_enabled !== undefined ? fantasy_enabled : user.fantasy_enabled,
+        modules: user.modules || ['shop', 'fantasy']
+      };
+
+      // Update name fields if provided
+      if (first_name && first_name !== user.first_name) {
+        updateData.first_name = first_name;
+      }
+      if (last_name && last_name !== user.last_name) {
+        updateData.last_name = last_name;
+      }
+      if (name && name !== user.name) {
+        updateData.name = name;
+      }
+      if (username && username !== user.username) {
+        updateData.username = username;
+      }
+
+      // Update token fields from Hygraph
+      if (shopTokens !== undefined) {
+        updateData.shopTokens = shopTokens;
+      }
+      if (totalSpentTokens !== undefined) {
+        updateData.totalSpentTokens = totalSpentTokens;
+      }
+      if (wallet_balance !== undefined) {
+        updateData.wallet_balance = wallet_balance;
+      }
+
       await userModel.updateOne(
-        { mobile },
-        { 
-          hygraph_user_id: hygraph_user_id || user.hygraph_user_id,
-          shop_enabled: shop_enabled !== undefined ? shop_enabled : user.shop_enabled,
-          fantasy_enabled: fantasy_enabled !== undefined ? fantasy_enabled : user.fantasy_enabled,
-          modules: user.modules || ['shop', 'fantasy']
-        }
+        { _id: user._id },
+        updateData
       );
-      user = await userModel.findOne({ mobile });
+      user = await userModel.findOne({ _id: user._id });
     }
     
     // Update Redis cache
@@ -4025,5 +4104,141 @@ exports.internalLogout = async (req) => {
   } catch (error) {
     console.error('Internal logout error:', error);
     return { status: false, message: 'Logout failed' };
+  }
+};
+exports.shopVerifiedLogin = async (req) => {
+  const { hygraph_user_id, mobile_number, first_name, last_name, username, name, shopTokens, totalSpentTokens, wallet_balance } = req.body;
+  
+  try {
+    if (!hygraph_user_id || !mobile_number) {
+      return { 
+        status: false, 
+        message: 'hygraph_user_id and mobile_number are required' 
+      };
+    }
+
+    // Find user by hygraph_user_id (primary) or mobile_number (fallback)
+    let user = await userModel.findOne({ hygraph_user_id });
+    
+    if (!user) {
+      user = await userModel.findOne({ mobile_number });
+    }
+
+    if (!user) {
+      return { 
+        status: false, 
+        message: 'User not found. Please sign up first.' 
+      };
+    }
+
+    // Verify user is active
+    if (user.status && user.status.toLowerCase() === 'blocked') {
+      return { 
+        status: false, 
+        message: 'Account is blocked. Please contact support.' 
+      };
+    }
+
+    // Update user data with shop info
+    const updateData = {
+      hygraph_user_id: hygraph_user_id || user.hygraph_user_id,
+    };
+    
+    if (first_name && first_name !== user.first_name) {
+      updateData.first_name = first_name;
+    }
+    if (last_name && last_name !== user.last_name) {
+      updateData.last_name = last_name;
+    }
+    if (name && name !== user.name) {
+      updateData.name = name;
+    }
+    if (username && username !== user.username) {
+      updateData.username = username;
+    }
+    
+    // Sync token/wallet data from Hygraph
+    if (shopTokens !== undefined) {
+      updateData.shopTokens = shopTokens;
+    }
+    if (totalSpentTokens !== undefined) {
+      updateData.totalSpentTokens = totalSpentTokens;
+    }
+    if (wallet_balance !== undefined) {
+      updateData.wallet_balance = wallet_balance;
+    }
+
+    if (Object.keys(updateData).length > 1) {
+      user = await userModel.findByIdAndUpdate(user._id, updateData, { new: true });
+    }
+
+    // Generate tokens
+    const { SignJWT } = await import("jose");
+    const secret = Buffer.from(global.constant.SECRET_TOKEN);
+    
+    // Generate short-lived access token (15 minutes)
+    const accessToken = await new SignJWT({ 
+      _id: user._id.toString(),
+      userId: user._id.toString(),
+      mobile_number: user.mobile_number,
+      modules: user.modules || ['shop', 'fantasy'],
+      shop_enabled: user.shop_enabled !== false,
+      fantasy_enabled: user.fantasy_enabled !== false
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setExpirationTime('15m')
+      .setIssuedAt()
+      .sign(secret);
+    
+    // Generate long-lived refresh token (30 days)
+    const refreshToken = await new SignJWT({
+      userId: user._id.toString(),
+      type: 'refresh',
+      mobile_number: user.mobile_number
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setExpirationTime('30d')
+      .setIssuedAt()
+      .sign(secret);
+
+    // Update user with new tokens
+    await userModel.updateOne(
+      { _id: user._id }, 
+      { 
+        auth_key: accessToken,
+        refresh_token: refreshToken
+      }
+    );
+
+    // Cache user in Redis
+    user.auth_key = accessToken;
+    user.refresh_token = refreshToken;
+    await redisUser.setUser(user);
+
+    return { 
+      status: true, 
+      message: 'Login successful',
+      user_id: user._id.toString(),
+      auth_key: accessToken,
+      refresh_token: refreshToken,
+      user: {
+        _id: user._id,
+        mobile_number: user.mobile_number,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        username: user.username,
+        name: user.name,
+        hygraph_user_id: user.hygraph_user_id,
+        modules: user.modules,
+        shop_enabled: user.shop_enabled,
+        fantasy_enabled: user.fantasy_enabled,
+        shopTokens: user.shopTokens,
+        totalSpentTokens: user.totalSpentTokens,
+        wallet_balance: user.wallet_balance
+      }
+    };
+  } catch (error) {
+    console.error('Shop verified login error:', error);
+    return { status: false, message: 'Login failed' };
   }
 };
