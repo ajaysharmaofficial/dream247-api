@@ -901,3 +901,60 @@ exports.refreshToken = async (req, res) => {
     });
   }
 };
+/**
+ * Fetch user's game tokens and transaction history
+ * GET /user/game-tokens
+ */
+exports.getGameTokens = async (req, res) => {
+  try {
+    const data = await userService.getGameTokens(req);
+
+    if (data && data.status) {
+      return res.status(200).json({
+        success: true,
+        message: data.message,
+        data: data.data
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: data.message
+      });
+    }
+  } catch (error) {
+    console.error('Error in getGameTokens:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch game tokens'
+    });
+  }
+};
+
+/**
+ * Debit game tokens when user spends them
+ * POST /user/debit-tokens
+ */
+exports.debitGameTokens = async (req, res) => {
+  try {
+    const data = await userService.debitGameTokens(req);
+
+    if (data && data.status) {
+      return res.status(200).json({
+        success: true,
+        message: data.message,
+        data: data.data
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: data.message
+      });
+    }
+  } catch (error) {
+    console.error('Error in debitGameTokens:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to debit game tokens'
+    });
+  }
+};

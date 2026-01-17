@@ -56,6 +56,10 @@ router.get("/maintenance-check", auth, userController.MaintenanceCheck);
 router.post("/validate-token", userController.validateToken);
 router.post("/refresh-token", userController.refreshToken);
 
+// Game tokens management routes
+router.get("/game-tokens", auth, userController.getGameTokens);
+router.post("/debit-tokens", auth, userController.debitGameTokens);
+
 // Shop-based auth (OTP verified by shop)
 router.post("/login", userController.shopVerifiedLogin);
 

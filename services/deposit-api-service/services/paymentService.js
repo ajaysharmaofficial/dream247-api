@@ -2508,7 +2508,18 @@ async function processSuccessfulDeposit(paymentData, razorpayData) {
     {
       $inc: {
         "userbalance.balance": amountWithGst,
-        "userbalance.bonus": tiers.tokenAmount
+        "userbalance.bonus": tiers.tokenAmount,
+        "game_tokens.balance": amountWithGst
+      },
+      $push: {
+        "game_tokens.transactions": {
+          amount: amountWithGst,
+          type: "topup",
+          razorpay_payment_id: razorpayData.payment_id,
+          transaction_id: paymentData.txnid,
+          description: "Game tokens topup via Razorpay",
+          created_at: new Date()
+        }
       }
     },
     { new: true }

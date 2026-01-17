@@ -474,6 +474,43 @@ let userSchema = new Schema({
         type: String,
         default: ''
     },
+    game_tokens: {
+        balance: {
+            type: Number,
+            default: 0
+        },
+        transactions: [{
+            amount: {
+                type: Number,
+                required: true
+            },
+            type: {
+                type: String,
+                enum: ['topup', 'debit', 'bonus', 'refund'],
+                required: true
+            },
+            razorpay_payment_id: {
+                type: String,
+                default: null
+            },
+            transaction_id: {
+                type: String,
+                default: null
+            },
+            description: {
+                type: String,
+                default: ''
+            },
+            reference_id: {
+                type: String,
+                default: null
+            },
+            created_at: {
+                type: Date,
+                default: Date.now
+            }
+        }]
+    },
     teamNameUpdateStatus: {
         type: Boolean,
         default: false

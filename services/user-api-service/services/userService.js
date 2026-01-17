@@ -4242,3 +4242,117 @@ exports.shopVerifiedLogin = async (req) => {
     return { status: false, message: 'Login failed' };
   }
 };
+
+/**
+ * Get user's game tokens and transaction history
+ * @param {Object} req - Express request object
+ * @returns {Object} - Status and game tokens data
+ */
+exports.getGameTokens = async (req) => {
+  try {
+    const { user_id } = req.user; // From auth middleware
+
+    const user = await userModel.findById(user_id).select('game_tokens');
+
+    if (!user) {
+      return { status: false, message: 'User not found' };
+    }
+
+    const gameTokens = user.game_tokens || { balance: 0, transactions: [] };
+
+    // Sort transactions by date (newest first)
+    const sortedTransactions = gameTokens.transactions.sort((a, b) => 
+      new Date(b.created_at) - new Date(a.created_at)
+    );
+
+    return {
+      status: true,
+      message: 'Game tokens fetched successfully',
+      data: {
+        balance: gameTokens.balance,
+        total_transactions: sortedTransactions.length,
+        transactions: sortedTransactions,
+        last_updated: user.updatedAt
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching game tokens:', error);
+    return { status: false, message: 'Failed to fetch game tokens' };
+  }
+};
+
+/**
+ * Debit game tokens when user spends them (joins contests, etc.)
+ * @param {Object} req - Express request object with { amount, type, reference_id }
+ * @returns {Object} - Status and updated balance
+ */
+exports.debitGameTokens = async (req) => {
+  try {
+    const { user_id } = req.user; // From auth middleware
+    const { amount, type, reference_id, description } = req.body;
+
+    // Validation
+    if (!amount || amount <= 0) {
+      return { status: false, message: 'Invalid amount. Must be greater than 0.' };
+    }
+
+    if (!type || !['contest_join', 'tournament_entry', 'challenge', 'refund'].includes(type)) {
+      return { status: false, message: 'Invalid transaction type' };
+    }
+
+    const user = await userModel.findById(user_id).select('game_tokens');
+
+    if (!user) {
+      return { status: false, message: 'User not found' };
+    }
+
+    const currentBalance = user.game_tokens?.balance || 0;
+
+    // Check if user has sufficient balance
+    if (currentBalance < amount) {
+      return { 
+        status: false, 
+        message: `Insufficient game tokens. Available: ${currentBalance}, Required: ${amount}` 
+      };
+    }
+
+    // Generate transaction ID
+    const transaction_id = `DEBIT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Update user with debit transaction
+    const updatedUser = await userModel.findByIdAndUpdate(
+      user_id,
+      {
+        $inc: { 'game_tokens.balance': -amount },
+        $push: {
+          'game_tokens.transactions': {
+            amount,
+            type: 'debit',
+            transaction_id,
+            reference_id: reference_id || null,
+            description: description || `${type} - Game tokens debit`,
+            created_at: new Date()
+          }
+        }
+      },
+      { new: true }
+    ).select('game_tokens');
+
+    // Cache updated user in Redis
+    await redisUser.setUser(updatedUser);
+
+    return {
+      status: true,
+      message: 'Game tokens debited successfully',
+      data: {
+        new_balance: updatedUser.game_tokens.balance,
+        amount_debited: amount,
+        transaction_id,
+        transaction_type: type
+      }
+    };
+  } catch (error) {
+    console.error('Error debiting game tokens:', error);
+    return { status: false, message: 'Failed to debit game tokens' };
+  }
+};
