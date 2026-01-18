@@ -69,9 +69,13 @@ router.post("/internal/logout", internalAuth, userController.internalLogout);
 
 // Unified Wallet Routes
 router.get('/wallet/balance', auth, walletController.getWalletBalance);
+router.get('/wallet/balance-full', auth, walletController.getWalletBalanceFull);
+router.get('/wallet/game-tokens-only', auth, walletController.getGameTokensOnly);
 router.post('/wallet/add-shop-tokens', auth, walletController.addShopTokens);
 router.post('/wallet/deduct-shop-tokens', auth, walletController.deductShopTokens);
 router.post('/wallet/sync-hygraph', auth, walletController.syncHygraphBalance);
 router.get('/wallet/transactions', auth, walletController.getTransactionHistory);
+router.post('/wallet/sync-shop-tokens-to-shop', auth, walletController.syncShopTokensToShop);
+router.get('/wallet/unified-history', auth, walletController.getUnifiedHistory);
 
 module.exports = router;

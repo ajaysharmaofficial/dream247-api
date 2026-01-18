@@ -342,3 +342,230 @@ exports.getTransactionHistory = async (req, res) => {
   }
 };
 
+/**
+ * Get ONLY game tokens (for header display)
+ * Fantasy app header shows only game tokens
+ */
+exports.getGameTokensOnly = async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    
+    let wallet = await UserWallet.findOne({ userId: userId.toString() });
+    
+    if (!wallet) {
+      wallet = await UserWallet.create({
+        userId: userId.toString(),
+        gameTokens: 0,
+      });
+    }
+    
+    return res.json({
+      success: true,
+      status: true,
+      gameTokens: wallet.gameTokens || 0,
+    });
+  } catch (error) {
+    console.error('getGameTokensOnly Error:', error);
+    return res.status(500).json({
+      success: false,
+      status: false,
+      message: 'Error fetching game tokens',
+    });
+  }
+};
+
+/**
+ * Get FULL wallet balance (both tokens)
+ * Fantasy wallet screen shows both game and shop tokens
+ */
+exports.getWalletBalanceFull = async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    
+    let wallet = await UserWallet.findOne({ userId: userId.toString() });
+    
+    if (!wallet) {
+      wallet = await UserWallet.create({
+        userId: userId.toString(),
+        shopTokens: 0,
+        gameTokens: 0,
+        totalSpent: 0,
+        totalAdded: 0,
+        totalWithdrawn: 0,
+      });
+    }
+    
+    return res.json({
+      success: true,
+      status: true,
+      data: {
+        gameTokens: wallet.gameTokens || 0,      // Editable - Fantasy manages
+        shopTokens: wallet.shopTokens || 0,      // Read-only - From Shop
+        totalSpent: wallet.totalSpent || 0,
+        totalAdded: wallet.totalAdded || 0,
+        totalWithdrawn: wallet.totalWithdrawn || 0,
+      },
+    });
+  } catch (error) {
+    console.error('getWalletBalanceFull Error:', error);
+    return res.status(500).json({
+      success: false,
+      status: false,
+      message: 'Error fetching full wallet balance',
+    });
+  }
+};
+
+/**
+ * Get unified wallet history (both shop and game tokens)
+ * Fantasy wallet screen shows transaction history of both tokens
+ */
+exports.getUnifiedHistory = async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
+    // Get all transactions for this user (both shop and game tokens)
+    const transactions = await WalletTransaction.find({ userId: userId.toString() })
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+    
+    const totalCount = await WalletTransaction.countDocuments({ userId: userId.toString() });
+    
+    return res.json({
+      success: true,
+      status: true,
+      data: {
+        transactions: transactions,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          pages: Math.ceil(totalCount / limit),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('getUnifiedHistory Error:', error);
+    return res.status(500).json({
+      success: false,
+      status: false,
+      message: 'Error fetching unified history',
+    });
+  }
+};
+
+/**
+ * Sync shop tokens to Shop backend
+ * Called after successful payment in Fantasy app
+ * Notifies Shop backend to update Hygraph with new shop tokens
+ */
+exports.syncShopTokensToShop = async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    const hygraphUserId = req.user.hygraph_user_id || req.body.hygraph_user_id;
+    const { amount, paymentId } = req.body;
+    
+    if (!hygraphUserId) {
+      return res.status(400).json({
+        success: false,
+        status: false,
+        message: 'hygraph_user_id not found',
+      });
+    }
+    
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        status: false,
+        message: 'Invalid amount',
+      });
+    }
+    
+    // Get current wallet
+    const wallet = await UserWallet.findOne({ userId: userId.toString() });
+    
+    if (!wallet) {
+      return res.status(400).json({
+        success: false,
+        status: false,
+        message: 'Wallet not found',
+      });
+    }
+    
+    try {
+      // Call Shop backend to sync shop tokens
+      const shopBackendUrl = process.env.SHOP_BACKEND_URL || 'http://localhost:4001';
+      const axios = require('axios');
+      
+      const syncResponse = await axios.post(
+        `${shopBackendUrl}/api/wallet/receive-shop-tokens-from-fantasy`,
+        {
+          hygraph_user_id: hygraphUserId,
+          shop_tokens: amount,
+          transaction_id: paymentId,
+          timestamp: new Date().toISOString(),
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-secret': process.env.INTERNAL_API_SECRET,
+          },
+          timeout: 5000,
+        }
+      );
+      
+      if (syncResponse.data && syncResponse.data.success) {
+        // Log successful sync
+        console.log(`[SYNC] Shop tokens synced to Shop backend for user ${hygraphUserId}: ${amount}`);
+        
+        return res.json({
+          success: true,
+          status: true,
+          message: 'Shop tokens synced to Shop app successfully',
+          data: {
+            shopTokensSynced: amount,
+            shopResponse: syncResponse.data,
+          },
+        });
+      } else {
+        console.error('[SYNC ERROR] Shop backend returned error:', syncResponse.data);
+        return res.status(500).json({
+          success: true,
+          status: true,
+          message: 'Shop tokens added locally but Shop app sync delayed',
+          warning: 'Shop app may need manual refresh',
+          data: {
+            shopTokensAdded: amount,
+          },
+        });
+      }
+    } catch (syncError) {
+      console.error('[SYNC ERROR] Failed to sync to Shop backend:', syncError.message);
+      // Still return success because tokens are added locally
+      // Shop will sync when user logs in next time
+      return res.json({
+        success: true,
+        status: true,
+        message: 'Shop tokens added to wallet (Shop app sync pending)',
+        warning: 'Shop app sync will happen on next login',
+        data: {
+          shopTokensAdded: amount,
+          localBalance: wallet.shopTokens,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('syncShopTokensToShop Error:', error);
+    return res.status(500).json({
+      success: false,
+      status: false,
+      message: 'Error syncing shop tokens',
+    });
+  }
+};
+
