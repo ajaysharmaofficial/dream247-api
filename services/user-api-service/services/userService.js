@@ -4124,52 +4124,89 @@ exports.shopVerifiedLogin = async (req) => {
       user = await userModel.findOne({ mobile_number });
     }
 
+    // If user doesn't exist, create new user (auto-create from shop login)
     if (!user) {
-      return { 
-        status: false, 
-        message: 'User not found. Please sign up first.' 
+      const referCode = await genrateReferCode(mobile_number);
+      const teamName = await generateTeamName(mobile_number);
+      
+      user = await userModel.create({
+        mobile_number,
+        mobile: parseInt(mobile_number) || 0,
+        hygraph_user_id,
+        first_name: first_name || '',
+        last_name: last_name || '',
+        name: name || `${first_name || ''} ${last_name || ''}`.trim(),
+        username: username || '',
+        shop_enabled: true,
+        fantasy_enabled: true,
+        modules: ['shop', 'fantasy'],
+        refer_code: referCode,
+        team: teamName,
+        status: 'activated',
+        shopTokens: shopTokens || 0,
+        totalSpentTokens: totalSpentTokens || 0,
+        wallet_balance: wallet_balance || 0,
+        user_verify: {
+          mobile_verify: 1
+        },
+        userbalance: {
+          balance: wallet_balance || 0,
+          winning: 0,
+          bonus: 0
+        }
+      });
+    } else {
+      // Verify user is active
+      if (user.status && user.status.toLowerCase() === 'blocked') {
+        return { 
+          status: false, 
+          message: 'Account is blocked. Please contact support.' 
+        };
+      }
+
+      // Update user data with shop info
+      const updateData = {
+        hygraph_user_id: hygraph_user_id || user.hygraph_user_id,
       };
-    }
+      
+      if (first_name && first_name !== user.first_name) {
+        updateData.first_name = first_name;
+      }
+      if (last_name && last_name !== user.last_name) {
+        updateData.last_name = last_name;
+      }
+      if (name && name !== user.name) {
+        updateData.name = name;
+      }
+      if (username && username !== user.username) {
+        updateData.username = username;
+      }
+      
+      // Sync token/wallet data from Hygraph
+      if (shopTokens !== undefined) {
+        updateData.shopTokens = shopTokens;
+      }
+      if (totalSpentTokens !== undefined) {
+        updateData.totalSpentTokens = totalSpentTokens;
+      }
+      if (wallet_balance !== undefined) {
+        updateData.wallet_balance = wallet_balance;
+      }
 
-    // Verify user is active
-    if (user.status && user.status.toLowerCase() === 'blocked') {
-      return { 
-        status: false, 
-        message: 'Account is blocked. Please contact support.' 
-      };
-    }
+      // Ensure modules and flags are set
+      if (!user.modules || !user.modules.includes('shop') || !user.modules.includes('fantasy')) {
+        updateData.modules = ['shop', 'fantasy'];
+      }
+      if (user.shop_enabled === undefined) {
+        updateData.shop_enabled = true;
+      }
+      if (user.fantasy_enabled === undefined) {
+        updateData.fantasy_enabled = true;
+      }
 
-    // Update user data with shop info
-    const updateData = {
-      hygraph_user_id: hygraph_user_id || user.hygraph_user_id,
-    };
-    
-    if (first_name && first_name !== user.first_name) {
-      updateData.first_name = first_name;
-    }
-    if (last_name && last_name !== user.last_name) {
-      updateData.last_name = last_name;
-    }
-    if (name && name !== user.name) {
-      updateData.name = name;
-    }
-    if (username && username !== user.username) {
-      updateData.username = username;
-    }
-    
-    // Sync token/wallet data from Hygraph
-    if (shopTokens !== undefined) {
-      updateData.shopTokens = shopTokens;
-    }
-    if (totalSpentTokens !== undefined) {
-      updateData.totalSpentTokens = totalSpentTokens;
-    }
-    if (wallet_balance !== undefined) {
-      updateData.wallet_balance = wallet_balance;
-    }
-
-    if (Object.keys(updateData).length > 1) {
-      user = await userModel.findByIdAndUpdate(user._id, updateData, { new: true });
+      if (Object.keys(updateData).length > 1) {
+        user = await userModel.findByIdAndUpdate(user._id, updateData, { new: true });
+      }
     }
 
     // Generate tokens
@@ -4180,7 +4217,7 @@ exports.shopVerifiedLogin = async (req) => {
     const accessToken = await new SignJWT({ 
       _id: user._id.toString(),
       userId: user._id.toString(),
-      mobile_number: user.mobile_number,
+      mobile: user.mobile || parseInt(user.mobile_number) || 0,
       modules: user.modules || ['shop', 'fantasy'],
       shop_enabled: user.shop_enabled !== false,
       fantasy_enabled: user.fantasy_enabled !== false
@@ -4194,7 +4231,7 @@ exports.shopVerifiedLogin = async (req) => {
     const refreshToken = await new SignJWT({
       userId: user._id.toString(),
       type: 'refresh',
-      mobile_number: user.mobile_number
+      mobile: user.mobile || parseInt(user.mobile_number) || 0
     })
       .setProtectedHeader({ alg: "HS256" })
       .setExpirationTime('30d')
@@ -4224,6 +4261,7 @@ exports.shopVerifiedLogin = async (req) => {
       user: {
         _id: user._id,
         mobile_number: user.mobile_number,
+        mobile: user.mobile,
         first_name: user.first_name,
         last_name: user.last_name,
         username: user.username,
