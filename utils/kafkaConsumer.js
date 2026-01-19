@@ -20,7 +20,7 @@ const Admin = require('../models/adminModel');
 
 const kafka = new Kafka({
   clientId: "my-producer",
-  brokers: ["localhost:9092"],
+  brokers: ["134.209.158.211:9092"],
 });
 
 

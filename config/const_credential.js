@@ -409,7 +409,7 @@ const credentials = {
   },
   rabbitMQConfig: {
     protocol: secret.RABBITMQ_PROTOCOL || "amqp",
-    hostname: secret.RABBITMQ_HOSTNAME || "localhost",
+    hostname: secret.RABBITMQ_HOSTNAME || "134.209.158.211",
     port: secret.RABBITMQ_PORT || 5672,
     username: secret.RABBITMQ_USERNAME || "guest",
     password: secret.RABBITMQ_PASSWORD || "guest",
